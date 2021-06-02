@@ -6,22 +6,22 @@
 	"description": "Modding tool for Myst IV: Revalation",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "node --loader ts-node/esm ./cli.ts",
+		"start": "node --loader ts-node/esm ./src/cli.ts",
 		"build": "tsc -b"
 	},
 	"bin": {
-		"disclosure": "./dist/cli.js"
+		"myst-disclosure": "./dist/cli.js"
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/exodustx0/disclosure.git"
+		"url": "git+https://github.com/exodustx0/myst-disclosure.git"
 	},
 	"author": "exodustx0",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/exodustx0/disclosure/issues"
+		"url": "https://github.com/exodustx0/myst-disclosure/issues"
 	},
-	"homepage": "https://github.com/exodustx0/disclosure#readme",
+	"homepage": "https://github.com/exodustx0/myst-disclosure#readme",
 	"engines": {
 		"node": "^12.20.0 || ^14.13.1 || >=16.0.0"
 	},
