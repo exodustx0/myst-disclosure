@@ -8,12 +8,13 @@ import uniqueString from 'unique-string';
 
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { ProgressLogger } from './util/progress-logger.js';
+import { numBytesInIndex, numFilesInIndex } from './util/container-helpers.js';
 
-import      * as Container from './types/container.js';
+import type * as Container from './types/container.js';
 import type * as CommandBlock from './types/command-block.js';
 import type * as Texture from './types/texture.js';
-import type * as Subtitles from './types/subtitles';
-import type * as Labels from './types/labels';
+import type * as Subtitles from './types/subtitles.js';
+import type * as Labels from './types/labels.js';
 
 export interface ContainerPackerSettings {
 	verbose: boolean;
@@ -131,11 +132,11 @@ export class ContainerPacker {
 		
 		const index = await this.readIndex();
 
-		if (this.settings.verbose) this.progressLogger!.levelUp(Container.numFilesInIndex(index) * 3, this.currentContainerPath);
+		if (this.settings.verbose) this.progressLogger!.levelUp(numFilesInIndex(index) * 3, this.currentContainerPath);
 		
 		await this.prepareFiles(index);
 		// TODO: make file table sorted top-level to bottom-level
-		await this.writeIndexToContainer(index, 23 + Container.numBytesInIndex(index));
+		await this.writeIndexToContainer(index, 23 + numBytesInIndex(index));
 		await this.writeFilesToContainer(index);
 	}
 

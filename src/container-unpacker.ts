@@ -3,12 +3,13 @@ import path from 'path';
 
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { ProgressLogger } from './util/progress-logger.js';
+import { numFilesInIndex } from './util/container-helpers.js';
 
-import      * as Container from './types/container.js';
+import type * as Container from './types/container.js';
 import type * as CommandBlock from './types/command-block.js';
 import type * as Texture from './types/texture.js';
-import type * as Subtitles from './types/subtitles';
-import type * as Labels from './types/labels';
+import type * as Subtitles from './types/subtitles.js';
+import type * as Labels from './types/labels.js';
 
 export interface ContainerUnpackerSettings {
 	verbose: boolean;
@@ -108,7 +109,7 @@ export class ContainerUnpacker {
 
 		const index = await this.readIndex();
 
-		if (this.settings.verbose) this.progressLogger!.levelUp(Container.numFilesInIndex(index), this.currentContainerPath);
+		if (this.settings.verbose) this.progressLogger!.levelUp(numFilesInIndex(index), this.currentContainerPath);
 
 		if (this.settings.indexOnly) {
 			await this.writeToJSON<Container.JSONFile>({
