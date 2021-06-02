@@ -1,26 +1,26 @@
 import type { FixedLengthArray } from 'type-fest';
 
 /*
- * char8           | 0x8   | signature                      | "ubi/b0-l"
- * uint32          | 0x1   | internal type                  | 0x3
- * uint32          | 0x1   | title length                   | [aa]
- * char16          | [aa]  | title                          |
- * Timestamp       | 0x1   | time of creation               |
- * uint32          | 0x1   | thumbnail size                 | [ab]
- * data            | [ab]  | thumbnail                      |
- * Position        | 0x1   | position data                  |
- * uint32          | 0x1   | size of next 3 items           |
- * uint32          | 0x1   | unknown                        | 0x0
- * uint32          | 0x1   | state class count              | [ac]
- * StateClass      | [ac]  | state classes                  |
- * uint32          | 0x1   | zip point world count          | [ad]
- * WorldZips       | [ad]  | zip point worlds               |
- * uint32          | 0x1   | world(?)                       |
- * uint32          | 0x1   | unknown                        | 0x0
- * uint32          | 0x1   | found amulet hint count        | [ae]
- * FoundAmuletHint | [ae]  | found amulet hints             |
- * JournalEntry    | 0x3E7 | journal entries                |
- * uint32          | 0x1   | checksum                       | sum of all bytes
+ * char8           | 0x8   | signature               | "ubi/b0-l"
+ * uint32          | 0x1   | internal type           | 0x3
+ * uint32          | 0x1   | title length            | [aa]
+ * char16          | [aa]  | title                   |
+ * Timestamp       | 0x1   | time of creation        |
+ * uint32          | 0x1   | thumbnail size          | [ab]
+ * data            | [ab]  | thumbnail               |
+ * Position        | 0x1   | position data           |
+ * uint32          | 0x1   | size of next 3 items    |
+ * uint32          | 0x1   | unknown                 | 0x0
+ * uint32          | 0x1   | state class count       | [ac]
+ * StateClass      | [ac]  | state classes           |
+ * uint32          | 0x1   | zip point world count   | [ad]
+ * WorldZips       | [ad]  | zip point worlds        |
+ * uint32          | 0x1   | world(?)                |
+ * uint32          | 0x1   | unknown                 | 0x0
+ * uint32          | 0x1   | found amulet hint count | [ae]
+ * FoundAmuletHint | [ae]  | found amulet hints      |
+ * JournalEntry    | 0x3E7 | journal entries         |
+ * uint32          | 0x1   | checksum                | sum of all bytes
  */
 export interface JSONFile {
 	type: 'savegame';

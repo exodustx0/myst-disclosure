@@ -12,9 +12,9 @@ export interface JSONFile {
 }
 
 /*
- * uint8    | 0x1  | number of subdirectories     | [aa]
+ * uint8    | 0x1  | subdirectory count           | [aa]
  * DirInfo  | [aa] | subdirectory info structures |
- * uint32   | 0x1  | number of files              | [ab]
+ * uint32   | 0x1  | file count                   | [ab]
  * FileInfo | [ab] | file info structures         |
  */
 export interface Index {
@@ -23,9 +23,9 @@ export interface Index {
 }
 
 /*
- * uint32 | 0x1  | directory name length | [ba]
- * char8  | [ba] | directory name        | ends with NUL (included in length)
- * Dir    | 0x1  | directory index       |
+ * uint32 | 0x1  | name length | [ba]
+ * char8  | [ba] | name        | ends with NUL (included in length)
+ * Dir    | 0x1  | index       |
  */
 export interface DirInfo {
 	name: string;
@@ -33,10 +33,10 @@ export interface DirInfo {
 }
 
 /*
- * uint32 | 0x1  | file name length | [ca]
- * char8  | [ca] | file name        | ends with NUL (included in length)
- * uint32 | 0x1  | file size        |
- * uint32 | 0x1  | file offset      | relative to start of file
+ * uint32 | 0x1  | name length | [ca]
+ * char8  | [ca] | name        | ends with NUL (included in length)
+ * uint32 | 0x1  | size        |
+ * uint32 | 0x1  | offset      | relative to start of file
  */
 export interface FileInfo {
 	name: string;
