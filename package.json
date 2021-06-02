@@ -1,0 +1,50 @@
+{
+	"name": "myst-disclosure",
+	"type": "module",
+	"exports": "./dist/cli.js",
+	"version": "0.0.1",
+	"description": "Modding tool for Myst IV: Revalation",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node --loader ts-node/esm ./cli.ts",
+		"build": "tsc -b"
+	},
+	"bin": {
+		"disclosure": "./dist/cli.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/exodustx0/disclosure.git"
+	},
+	"author": "exodustx0",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/exodustx0/disclosure/issues"
+	},
+	"homepage": "https://github.com/exodustx0/disclosure#readme",
+	"engines": {
+		"node": "^12.20.0 || ^14.13.1 || >=16.0.0"
+	},
+	"dependencies": {
+		"alpha-sort": "^5.0.0",
+		"chalk": "^4.1.1",
+		"commander": "^7.2.0",
+		"del": "^6.0.0",
+		"term-size": "^2.2.1",
+		"type-fest": "^1.2.0",
+		"unique-string": "^3.0.0"
+	},
+	"devDependencies": {
+		"@types/node": "^15.6.2",
+		"@types/rimraf": "^3.0.0",
+		"@typescript-eslint/eslint-plugin": "^4.26.0",
+		"@typescript-eslint/parser": "^4.26.0",
+		"eslint": "^7.27.0",
+		"eslint-plugin-jsdoc": "^35.1.2",
+		"eslint-plugin-node": "^11.1.0",
+		"eslint-plugin-unicorn": "^33.0.0",
+		"ts-node": "^10.0.0",
+		"tslib": "^2.2.0",
+		"typescript": "^4.3.2"
+	}
+}
