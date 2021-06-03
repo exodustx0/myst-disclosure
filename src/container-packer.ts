@@ -173,7 +173,7 @@ export class ContainerPacker {
 	}
 
 	private async prepareFiles(index: Container.Index) {
-		for await (const fileInfo of this.files(index)) {
+		for (const fileInfo of this.files(index)) {
 			if (fileInfo.name.endsWith('-m4b')) {
 				fileInfo.tempPath = this.tempFilePath;
 				fileInfo.name = fileInfo.name.slice(0, -4) + '.m4b';
@@ -218,7 +218,7 @@ export class ContainerPacker {
 	}
 
 	private async writeFilesToContainer(index: Container.Index) {
-		for await (const fileInfo of this.files(index)) {
+		for (const fileInfo of this.files(index)) {
 			const readFile = await ReadFile.open(fileInfo.tempPath ?? this.sourcePath);
 			try {
 				await readFile.transfer(this.writeFile);
@@ -395,7 +395,7 @@ export class ContainerPacker {
 		}
 	}
 
-	private async *files(index: Container.Index): AsyncGenerator<Container.FileInfo> {
+	private *files(index: Container.Index): Generator<Container.FileInfo> {
 		for (const dirInfo of index.dirs) {
 			this.path.push(dirInfo.name);
 			yield* this.files(dirInfo.index);

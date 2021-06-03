@@ -117,7 +117,7 @@ export class ContainerUnpacker {
 				index,
 			});
 
-			for await (const fileInfo of this.files(index)) {
+			for (const fileInfo of this.files(index)) {
 				const extension = path.parse(fileInfo.name).ext.slice(1);
 				if (extension === 'm4b') {
 					fileInfo.offset += startOfContainer;
@@ -164,7 +164,7 @@ export class ContainerUnpacker {
 	}
 
 	private async unpackFiles(index: Container.Index, startOfContainer: number) {
-		for await (const fileInfo of this.files(index)) {
+		for (const fileInfo of this.files(index)) {
 			fileInfo.offset += startOfContainer;
 			await this.createReadFile(fileInfo.offset, fileInfo.size, async () => {
 				const extension = path.parse(fileInfo.name).ext.slice(1);
@@ -359,7 +359,7 @@ export class ContainerUnpacker {
 		});
 	}
 
-	private async *files(index: Container.Index): AsyncGenerator<Container.FileInfo> {
+	private *files(index: Container.Index): Generator<Container.FileInfo> {
 		for (const dirInfo of index.dirs) {
 			this.path.push(dirInfo.name);
 			yield* this.files(dirInfo.index);
