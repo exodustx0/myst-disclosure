@@ -251,7 +251,7 @@ export class ContainerPacker {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x6); // type
 			await this.writeFile.writeUInt32(0x1); // sub-type
-			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -9));
+			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4));
 			await this.writeFile.writeUInt32(json.commands.length);
 			for (const command of json.commands) await this.writeFile.writeCharEncHeadered(command);
 	
@@ -313,7 +313,7 @@ export class ContainerPacker {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x24); // type
 			await this.writeFile.writeUInt32(0x1); // unknown
-			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -9));
+			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4));
 			await this.writeFile.writeUInt32(0x1); // unknown
 			await this.writeFile.writeChar8Headered(json.relatedSoundFile);
 			await this.writeFile.writeUInt32(json.subtitles.length);
@@ -341,7 +341,7 @@ export class ContainerPacker {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x25); // type
 			await this.writeFile.writeUInt32(0x1); // unknown
-			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -9));
+			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4));
 			await this.writeFile.writeUInt32(0x1); // unknown
 			await this.writeFile.writeUInt32(json.labels.length);
 			await this.writeFile.writeUInt32(json.groups.length);
