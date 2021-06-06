@@ -14,10 +14,6 @@ TODO: add CLI documentation; for now, use the `-h` flag to get usage info.
 
 `myst-disclosure` is currently UNSTABLE. What this means is that features and API's are work-in-progress: they might not work as intended yet, or are otherwise not yet set in stone. Everything will be STABLE once version v1 is released.
 
-Known issues:
-
-* The container packer produces _technically-valid_ containers, but Revelation does not understand them. The current assumption is that Revelation expects the files in container file tables to be ordered top-level to bottom-level, instead of the other way around which the packer currently does.
-
 ## Contributing
 
 * Clone the repo.
