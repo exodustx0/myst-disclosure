@@ -76,15 +76,17 @@ export interface PositionData {
 }
 
 /*
- * uint32   | 0x1  | name length           | [ba]
- * char8enc | [ba] | name                  |
- * uint32   | 0x1  | state count           | [bb]
- * State    | [bb] | states                |
- * uint32   | 0x1  | unknown (subclasses?) | 0x0
+ * uint32   | 0x1  | name length   | [ba]
+ * char8enc | [ba] | name          |
+ * uint32   | 0x1  | state count   | [bb]
+ * State    | [bb] | states        |
+ * uint32   | 0x1  | unknown count | [bc]
+ * Unknown  | [bc] | unknowns      |
  */
 export interface StateClass {
 	name: string;
 	states: State[];
+	unknowns?: StateUnknown[];
 }
 
 /*
@@ -105,7 +107,7 @@ export interface StateClass {
  * case 0x9:
  * uint8     | 0x1  | value        | bool (0 or 1)
  * case 0x11:
- * unknown96 | 0x1  | value        |
+ * float     | 0x3  | value        |
  * case 0x13:
  * uint32    | 0x1  | value length | [cc]
  * char8     | [cc] | value        |
@@ -129,9 +131,18 @@ export const enum StateType {
 }
 
 /*
+ * uint32   | 0x1  | name length | [da]
+ * char8enc | [da] | name        |
+ * uint32   | 0x2  | unknown     | 0x0
+ */
+export interface StateUnknown {
+	name: string;
+}
+
+/*
  * uint32   | 0x1  | world           |
- * uint32   | 0x1  | zip point count | [da]
- * ZipPoint | [da] | zip points      |
+ * uint32   | 0x1  | zip point count | [ea]
+ * ZipPoint | [ea] | zip points      |
  */
 export interface ZipPointWorld {
 	world: number;
@@ -163,12 +174,12 @@ export interface FoundAmuletHint {
 }
 
 /*
- * uint32 | 0x1  | text length      | [ea]
- * char16 | [ea] | text             |
+ * uint32 | 0x1  | text length      | [fa]
+ * char16 | [fa] | text             |
  * uint8  | 0x1  | has photo        | bool (0 or 1)
  * if (has photo) {
- * uint32 | 0x1  | photo size       | [eb]
- * data   | [eb] | photo            |
+ * uint32 | 0x1  | photo size       | [fb]
+ * data   | [fb] | photo            |
  * }
  * uint3  | 0x1  | next page exists | bool (0 or 1)
  */
