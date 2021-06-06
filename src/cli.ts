@@ -6,8 +6,8 @@ import { program } from 'commander';
 
 import { ContainerUnpacker } from './container-unpacker.js';
 import type { ContainerUnpackerSettings } from './container-unpacker.js';
-import { ContainerPacker } from './container-packer.js';
-import type { ContainerPackerSettings } from './container-packer.js';
+import { ContainerRepacker } from './container-repacker.js';
+import type { ContainerRepackerSettings } from './container-repacker.js';
 
 const checkPathArg = async (pathArg: string, type: string) => {
 	await fsP.access(pathArg, fs.constants.F_OK).catch(() => {
@@ -42,9 +42,9 @@ const checkPathArg = async (pathArg: string, type: string) => {
 			await unpacker.run();
 		});
 	
-	const pack = program
-		.command('pack <source> [destination]')
-		.description('pack one or more unpacked containers (directory ending with "-m4b")')
+	const repack = program
+		.command('repack <source> [destination]')
+		.description('repack one or more unpacked containers (directory ending with "-m4b")')
 		.option('-v, --verbose', 'verbose output')
 		.option('-L, --skip-log-files', 'skip unpacking of .log files')
 		.action(async (source: string, destination?: string) => {
@@ -60,7 +60,7 @@ const checkPathArg = async (pathArg: string, type: string) => {
 					: source;
 			}
 
-			const packer = new ContainerPacker(source, destination, pack.opts() as ContainerPackerSettings);
+			const packer = new ContainerRepacker(source, destination, repack.opts() as ContainerRepackerSettings);
 			await packer.run();
 		});
 

@@ -15,12 +15,12 @@ import type * as Texture from './types/texture.js';
 import type * as Subtitles from './types/subtitles.js';
 import type * as Labels from './types/labels.js';
 
-export interface ContainerPackerSettings {
+export interface ContainerRepackerSettings {
 	verbose: boolean;
 	skipLogFiles: boolean;
 }
 
-export class ContainerPacker {
+export class ContainerRepacker {
 	private readonly tempDir = path.join(fs.realpathSync(os.tmpdir()), `disclosure_${uniqueString()}`);
 	private readonly path: string[] = [];
 	private readonly writeFiles: WriteFile[] = [];
@@ -29,7 +29,7 @@ export class ContainerPacker {
 	constructor(
 		private sourceRoot: string,
 		private readonly destinationRoot: string,
-		private readonly settings: ContainerPackerSettings,
+		private readonly settings: ContainerRepackerSettings,
 	) {
 		if (this.settings.verbose) this.progressLogger = new ProgressLogger();
 	}
