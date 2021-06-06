@@ -27,7 +27,7 @@ export class ContainerRepacker {
 		.command('repack <source> [destination]')
 		.description('repack one or more unpacked containers (directory ending with "-m4b")')
 		.option('-v, --verbose', 'verbose output')
-		.option('-L, --skip-log-files', 'skip unpacking of .log files')
+		.option('-L, --skip-log-files', 'skip repacking of .log files')
 		.action(async (source: string, destination?: string) => {
 			[source, destination] = await resolvePathArguments('-m4b', source, destination);
 
@@ -40,7 +40,7 @@ export class ContainerRepacker {
 	private readonly writeFiles: WriteFile[] = [];
 	private readonly progressLogger?: ProgressLogger;
 
-	constructor(
+	private constructor(
 		private sourceRoot: string,
 		private readonly destinationRoot: string,
 		private readonly settings: Settings,
@@ -75,7 +75,7 @@ export class ContainerRepacker {
 		return this.writeFiles[this.writeFiles.length - 1];
 	}
 
-	async run() {
+	private async run() {
 		const interruptHandler = () => {
 			del(this.tempDir, { force: true })
 				.catch(() => { throw `Temp directory "${this.tempDir}" could not be deleted.` });

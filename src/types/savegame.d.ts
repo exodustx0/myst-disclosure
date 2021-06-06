@@ -117,7 +117,7 @@ export interface State {
 	value?: number | boolean | FixedLengthArray<number, 3> | string;
 }
 
-export enum StateType {
+export const enum StateType {
 	UInt8 = 1,
 	UInt32 = 3,
 	Int8 = 4,

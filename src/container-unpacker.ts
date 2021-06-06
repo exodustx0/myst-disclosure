@@ -38,7 +38,7 @@ export class ContainerUnpacker {
 	private readonly readFiles: ReadFile[] = [];
 	private readonly progressLogger?: ProgressLogger;
 
-	constructor(
+	private constructor(
 		private sourceRoot: string,
 		private readonly destinationRoot: string,
 		private readonly settings: Settings,
@@ -73,7 +73,7 @@ export class ContainerUnpacker {
 		return this.readFiles[this.readFiles.length - 1];
 	}
 
-	async run() {
+	private async run() {
 		if (this.settings.verbose) console.time('Duration');
 
 		const sourceEntry = await fsP.stat(this.sourceRoot);
