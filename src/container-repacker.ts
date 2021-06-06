@@ -80,6 +80,7 @@ export class ContainerRepacker {
 			del(this.tempDir, { force: true })
 				.catch(() => { throw `Temp directory "${this.tempDir}" could not be deleted.` });
 		};
+		process.once('SIGTERM', interruptHandler);
 		process.once('SIGINT', interruptHandler);
 
 		if (this.settings.verbose) console.time('Duration');
@@ -101,6 +102,7 @@ export class ContainerRepacker {
 				await this.checkDir(true);
 			}
 		} finally {
+			process.removeListener('SIGTERM', interruptHandler);
 			process.removeListener('SIGINT', interruptHandler);
 			interruptHandler();
 		}
