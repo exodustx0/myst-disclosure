@@ -363,18 +363,6 @@ export class ContainerUnpacker {
 		}
 	}
 
-	private mkdirIfDoesNotExist(recursive = false) {
-		return new Promise<void>((resolve, reject) => {
-			const destinationPath = path.parse(this.destinationPath).dir;
-			fsP.access(destinationPath, fs.constants.F_OK)
-				.then(() => {
-					fsP.access(destinationPath, fs.constants.W_OK).then(resolve).catch(() => reject(`No write permissions for "${destinationPath}".`));
-				}).catch(() => {
-					fsP.mkdir(destinationPath, { recursive }).then(() => resolve()).catch(reject);
-				});
-		});
-	}
-
 	private *files(index: Container.Index): Generator<Container.FileInfo> {
 		for (const dirInfo of index.dirs) {
 			this.path.push(dirInfo.name);
@@ -387,6 +375,18 @@ export class ContainerUnpacker {
 			yield fileInfo;
 			this.path.pop();
 		}
+	}
+
+	private mkdirIfDoesNotExist(recursive = false) {
+		return new Promise<void>((resolve, reject) => {
+			const destinationPath = path.parse(this.destinationPath).dir;
+			fsP.access(destinationPath, fs.constants.F_OK)
+				.then(() => {
+					fsP.access(destinationPath, fs.constants.W_OK).then(resolve).catch(() => reject(`No write permissions for "${destinationPath}".`));
+				}).catch(() => {
+					fsP.mkdir(destinationPath, { recursive }).then(() => resolve()).catch(reject);
+				});
+		});
 	}
 
 	private async writeToFile() {
