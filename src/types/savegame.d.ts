@@ -14,8 +14,8 @@ import type { FixedLengthArray } from 'type-fest';
  * uint32          | 0x1   | state class count       | [ac]
  * StateClass      | [ac]  | state classes           |
  * uint32          | 0x1   | zip point world count   | [ad]
- * WorldZips       | [ad]  | zip point worlds        |
- * uint32          | 0x1   | world(?)                |
+ * ZipPointWorld   | [ad]  | zip point worlds        |
+ * uint32          | 0x1   | world                   | assumed to be identical to PositionData.world
  * uint32          | 0x1   | unknown                 | 0x0
  * uint32          | 0x1   | found amulet hint count | [ae]
  * FoundAmuletHint | [ae]  | found amulet hints      |
@@ -28,8 +28,8 @@ export interface JSONFile {
 	createdAt: Timestamp;
 	positionData: PositionData;
 	stateClasses: StateClass[];
-	zipPointWorlds: WorldZips[];
-	foundNecklaceHints: FoundAmuletHint[];
+	zipPointWorlds: ZipPointWorld[];
+	foundAmuletHints: FoundAmuletHint[];
 	journalEntries: JournalEntry[];
 }
 
@@ -43,7 +43,10 @@ export interface JSONFile {
  * uint32 | 0x1 | second
  * uint32 | 0x1 | year
  */
-export type Timestamp = Date;
+export interface Timestamp {
+	date: Date;
+	dst: number;
+}
 
 /*
  * uint32 | 0x1  | world                                |
@@ -73,11 +76,11 @@ export interface PositionData {
 }
 
 /*
- * uint32   | 0x1  | name length | [ba]
- * char8enc | [ba] | name        |
- * uint32   | 0x1  | state count | [bb]
- * State    | [bb] | states      |
- * uint32   | 0x1  | unknown     | 0x0
+ * uint32   | 0x1  | name length           | [ba]
+ * char8enc | [ba] | name                  |
+ * uint32   | 0x1  | state count           | [bb]
+ * State    | [bb] | states                |
+ * uint32   | 0x1  | unknown (subclasses?) | 0x0
  */
 export interface StateClass {
 	name: string;
@@ -108,19 +111,10 @@ export interface StateClass {
  * char8     | [cc] | value        |
  * }
  */
-export interface State<TStateType extends StateType> {
+export interface State {
 	name: string;
-	type: TStateType;
-	value: TStateType extends (
-		| StateType.UInt8
-		| StateType.UInt32
-		| StateType.Int8
-		| StateType.Int32
-		| StateType.Float
-	) ? number :
-		TStateType extends StateType.Bool ? boolean :
-			TStateType extends StateType.Unknown ? FixedLengthArray<number, 3> :
-				TStateType extends StateType.Char8 ? string : never;
+	type: StateType;
+	value?: number | boolean | FixedLengthArray<number, 3> | string;
 }
 
 export enum StateType {
@@ -139,7 +133,7 @@ export enum StateType {
  * uint32   | 0x1  | zip point count | [da]
  * ZipPoint | [da] | zip points      |
  */
-export interface WorldZips {
+export interface ZipPointWorld {
 	world: number;
 	zipPoints: ZipPoint[];
 }
@@ -169,16 +163,16 @@ export interface FoundAmuletHint {
 }
 
 /*
- * uint32 | 0x1  | text length              | [ea]
- * char16 | [ea] | text                     |
- * uint8  | 0x1  | has image                | bool (0 or 1)
- * if (has image) {
- * uint32 | 0x1  | photo size               | [eb]
- * data   | [eb] | photo                    |
+ * uint32 | 0x1  | text length      | [ea]
+ * char16 | [ea] | text             |
+ * uint8  | 0x1  | has photo        | bool (0 or 1)
+ * if (has photo) {
+ * uint32 | 0x1  | photo size       | [eb]
+ * data   | [eb] | photo            |
  * }
- * uint3  | 0x1  | next journal page exists | bool (0 or 1)
+ * uint3  | 0x1  | next page exists | bool (0 or 1)
  */
 export interface JournalEntry {
-	text?: string;
-	hasImage: boolean;
+	text: string;
+	hasPhoto: boolean;
 }
