@@ -8,7 +8,7 @@ import type { FixedLengthArray } from 'type-fest';
  * Timestamp       | 0x1   | time of creation        |
  * uint32          | 0x1   | thumbnail size          | [ab]
  * data            | [ab]  | thumbnail               |
- * Position        | 0x1   | position data           |
+ * PositionData    | 0x1   | position data           |
  * uint32          | 0x1   | size of next 3 items    |
  * uint32          | 0x1   | unknown                 | 0x0
  * uint32          | 0x1   | state class count       | [ac]

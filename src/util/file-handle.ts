@@ -47,25 +47,25 @@ export class ReadFile {
 		await this.close();
 	}
 
-	async skip(count: number) {
-		while (count > 0) {
-			const skip = Math.min(count, 0x4000);
-			count -= skip;
-			await this.readBuffer(skip);
+	async skip(numBytes: number) {
+		while (numBytes > 0) {
+			const skipBytes = Math.min(numBytes, 0x4000);
+			numBytes -= skipBytes;
+			await this.readBuffer(skipBytes);
 		}
 	}
 
 	////////////////
 	// READ METHODS
 
-	async readBuffer(size: number) {
+	async readBuffer(numBytes: number) {
 		if (this.closed) throw new Error('Read after file closed.');
-		if (size === 0) return Buffer.from([]);
-		if (this.internalFileOffset + size > this.endOffset) throw new Error('Read out of bounds.');
+		if (numBytes === 0) return Buffer.from([]);
+		if (this.internalFileOffset + numBytes > this.endOffset) throw new Error('Read out of bounds.');
 
-		const buffer = Buffer.allocUnsafe(size);
-		await this.fileHandle.read(buffer, 0, size, this.internalFileOffset);
-		this.internalFileOffset += size;
+		const buffer = Buffer.allocUnsafe(numBytes);
+		await this.fileHandle.read(buffer, 0, numBytes, this.internalFileOffset);
+		this.internalFileOffset += numBytes;
 		return buffer;
 	}
 
