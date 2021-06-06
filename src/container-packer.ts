@@ -268,11 +268,11 @@ export class ContainerPacker {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x27); // type
 			await this.writeFile.writeUInt32(0x2); // unknown
-			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -9));
 			if (fileInfo.name.endsWith('.png')) {
+				await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -8));
 				fileInfo.name = fileInfo.name.slice(0, -4);
 				await this.writeFile.writeUInt8(0x0); // not localized
-				await this.writeFile.writeChar8Headered('png'); // image format
+				await this.writeFile.writeCharEncHeadered('png'); // image format
 				await this.writeFile.writeUInt32((await fsP.stat(this.sourcePath)).size); // image size
 	
 				const png = await ReadFile.open(this.sourcePath);
@@ -289,6 +289,7 @@ export class ContainerPacker {
 				) throw `"${this.sourcePath}" is not a valid localized texture reference JSON file.`;
 	
 				fileInfo.name = fileInfo.name.slice(0, -5);
+				await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4));
 				await this.writeFile.writeUInt8(0x1); // localized
 				await this.writeFile.writeChar8Headered(json.path);
 			}
