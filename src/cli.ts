@@ -3,6 +3,7 @@ import { program } from 'commander';
 
 import { ContainerUnpacker } from './container-unpacker.js';
 import { ContainerRepacker } from './container-repacker.js';
+import { SavegameUnpacker } from './savegame-unpacker.js';
 
 (async () => {
 	program
@@ -10,6 +11,11 @@ import { ContainerRepacker } from './container-repacker.js';
 		.description('.m4b file')
 		.addCommand(ContainerUnpacker.command)
 		.addCommand(ContainerRepacker.command);
+
+	program
+		.command('savegame')
+		.description('.m4s file')
+		.addCommand(SavegameUnpacker.command);
 
 	await program.parseAsync();
 })().catch(err => {

@@ -37,14 +37,18 @@ export class ReadFile {
 		}
 	}
 
-	async transfer(writeFile: WriteFile) {
-		while (this.internalFileOffset < this.endOffset) {
-			const chunkSize = Math.min(0x4000, this.endOffset - this.internalFileOffset);
+	async transfer(writeFile: WriteFile, numBytes?: number) {
+		const endOffset = typeof numBytes === 'number'
+			? this.internalFileOffset + numBytes
+			: this.endOffset;
+
+		while (this.internalFileOffset < endOffset) {
+			const chunkSize = Math.min(0x4000, endOffset - this.internalFileOffset);
 			const chunk = await this.readBuffer(chunkSize);
 			await writeFile.writeBuffer(chunk);
 		}
 
-		await this.close();
+		if (typeof numBytes !== 'number') await this.close();
 	}
 
 	async skip(numBytes: number) {
