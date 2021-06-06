@@ -1,3 +1,4 @@
+import cliCursor from 'cli-cursor';
 import chalk from 'chalk';
 import { program } from 'commander';
 
@@ -6,6 +7,8 @@ import { ContainerRepacker } from './container-repacker.js';
 import { SavegameUnpacker } from './savegame-unpacker.js';
 
 (async () => {
+	cliCursor.hide();
+
 	program
 		.command('container')
 		.description('.m4b file')

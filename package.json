@@ -27,6 +27,7 @@
 	},
 	"dependencies": {
 		"chalk": "^4.1.1",
+		"cli-cursor": "^3.1.0",
 		"commander": "^7.2.0",
 		"del": "^6.0.0",
 		"term-size": "^2.2.1",
