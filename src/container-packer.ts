@@ -134,7 +134,6 @@ export class ContainerPacker {
 		if (this.settings.verbose) this.progressLogger!.levelUp(numFilesInIndex(index) * 3, this.currentContainerPath);
 		
 		await this.prepareFiles(index);
-		// TODO: make file table sorted top-down depth-first
 		await this.writeIndexToContainer(index, 23 + numBytesInIndex(index));
 		await this.writeFilesToContainer(index);
 	}
