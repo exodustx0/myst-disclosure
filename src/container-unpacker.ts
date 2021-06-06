@@ -28,7 +28,7 @@ export class ContainerUnpacker {
 		.option('-i, --index-only', 'only unpack the index of containers')
 		.option('-L, --skip-log-files', 'skip unpacking of .log files')
 		.action(async (source: string, destination?: string) => {
-			[source, destination] = await resolvePathArguments(source, destination);
+			[source, destination] = await resolvePathArguments('.m4b', source, destination);
 
 			const unpacker = new ContainerUnpacker(source, destination, ContainerUnpacker.command.opts() as Settings);
 			await unpacker.run();

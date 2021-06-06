@@ -10,7 +10,7 @@ async function checkPath(pathArg: string, type: string) {
 	});
 }
 
-export async function resolvePathArguments(source: string, destination?: string) {
+export async function resolvePathArguments(extension: string, source: string, destination?: string) {
 	source = path.resolve(source);
 	await checkPath(source, 'source');
 
@@ -18,7 +18,7 @@ export async function resolvePathArguments(source: string, destination?: string)
 		destination = path.resolve(destination);
 		await checkPath(destination, 'destination');
 	} else {
-		destination = source.endsWith('.m4b')
+		destination = source.endsWith(extension)
 			? path.parse(source).dir
 			: source;
 	}
