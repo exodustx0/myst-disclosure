@@ -2,7 +2,6 @@ import fs, { promises as fsP } from 'fs';
 import os from 'os';
 import path from 'path';
 
-// import alphaSort from 'alpha-sort';
 import del from 'del';
 import uniqueString from 'unique-string';
 
@@ -148,7 +147,6 @@ export class ContainerPacker {
 
 		const dir = (await fsP.readdir(this.sourcePath, { withFileTypes: true }))
 			.filter(entry => entry.isDirectory() || entry.isFile());
-			// .sort((a, b) => alphaSort()(a.name, b.name));
 
 		for (const entry of dir) {
 			if (entry.isDirectory() && !entry.name.endsWith('-m4b')) {
