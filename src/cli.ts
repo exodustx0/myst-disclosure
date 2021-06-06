@@ -1,70 +1,17 @@
-import fs, { promises as fsP } from 'fs';
-import path from 'path';
-
 import chalk from 'chalk';
 import { program } from 'commander';
 
 import { ContainerUnpacker } from './container-unpacker.js';
-import type { ContainerUnpackerSettings } from './container-unpacker.js';
 import { ContainerRepacker } from './container-repacker.js';
-import type { ContainerRepackerSettings } from './container-repacker.js';
-
-const checkPathArg = async (pathArg: string, type: string) => {
-	await fsP.access(pathArg, fs.constants.F_OK).catch(() => {
-		throw `The ${type} path does not exist.`;
-	});
-	await fsP.access(pathArg, fs.constants.R_OK).catch(() => {
-		throw `The ${type} path cannot be read from.`;
-	});
-};
 
 (async () => {
-	const unpack = program
-		.command('unpack <source> [destination]')
-		.description('unpack a container or a folder of containers')
-		.option('-v, --verbose', 'verbose output')
-		.option('-i, --index-only', 'only unpack the index of containers')
-		.option('-L, --skip-log-files', 'skip unpacking of .log files')
-		.action(async (source: string, destination?: string) => {
-			source = path.resolve(source);
-			await checkPathArg(source, 'source');
+	program
+		.command('container')
+		.description('container format (.m4b files)')
+		.addCommand(ContainerUnpacker.command)
+		.addCommand(ContainerRepacker.command);
 
-			if (typeof destination === 'string') {
-				destination = path.resolve(destination);
-				await checkPathArg(destination, 'destination');
-			} else {
-				destination = source.endsWith('.m4b')
-					? path.parse(source).dir
-					: source;
-			}
-
-			const unpacker = new ContainerUnpacker(source, destination, unpack.opts() as ContainerUnpackerSettings);
-			await unpacker.run();
-		});
-	
-	const repack = program
-		.command('repack <source> [destination]')
-		.description('repack one or more unpacked containers (directory ending with "-m4b")')
-		.option('-v, --verbose', 'verbose output')
-		.option('-L, --skip-log-files', 'skip unpacking of .log files')
-		.action(async (source: string, destination?: string) => {
-			source = path.resolve(source);
-			await checkPathArg(source, 'source');
-
-			if (typeof destination === 'string') {
-				destination = path.resolve(destination);
-				await checkPathArg(destination, 'destination');
-			} else {
-				destination = source.endsWith('-m4b')
-					? path.parse(source).dir
-					: source;
-			}
-
-			const packer = new ContainerRepacker(source, destination, repack.opts() as ContainerRepackerSettings);
-			await packer.run();
-		});
-
-	// TODO: add savefile and options (un)packers
+	// TODO: add savefile and options un-/repackers
 
 	await program.parseAsync();
 })().catch(err => {

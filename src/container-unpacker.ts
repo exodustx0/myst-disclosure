@@ -1,9 +1,12 @@
 import fs, { promises as fsP } from 'fs';
 import path from 'path';
 
+import { Command } from 'commander';
+
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { ProgressLogger } from './util/progress-logger.js';
 import { numFilesInIndex } from './util/container-helpers.js';
+import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
 import type * as Container from './types/container.js';
 import type * as CommandBlock from './types/command-block.js';
@@ -11,7 +14,7 @@ import type * as Texture from './types/texture.js';
 import type * as Subtitles from './types/subtitles.js';
 import type * as Labels from './types/labels.js';
 
-export interface ContainerUnpackerSettings {
+interface ContainerUnpackerSettings {
 	verbose: boolean;
 	indexOnly: boolean;
 	skipLogFiles: boolean;
@@ -21,6 +24,19 @@ export class ContainerUnpacker {
 	private readonly path: string[] = [];
 	private readonly readFiles: ReadFile[] = [];
 	private readonly progressLogger?: ProgressLogger;
+
+	static command = new Command()
+		.command('unpack <source> [destination]')
+		.description('unpack a container or a folder of containers')
+		.option('-v, --verbose', 'verbose output')
+		.option('-i, --index-only', 'only unpack the index of containers')
+		.option('-L, --skip-log-files', 'skip unpacking of .log files')
+		.action(async (source: string, destination?: string) => {
+			[source, destination] = await resolvePathArguments(source, destination);
+
+			const unpacker = new ContainerUnpacker(source, destination, ContainerUnpacker.command.opts() as ContainerUnpackerSettings);
+			await unpacker.run();
+		});
 
 	constructor(
 		private sourceRoot: string,

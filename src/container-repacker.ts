@@ -2,12 +2,14 @@ import fs, { promises as fsP } from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { Command } from 'commander';
 import del from 'del';
 import uniqueString from 'unique-string';
 
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { ProgressLogger } from './util/progress-logger.js';
 import { numBytesInIndex, numFilesInIndex } from './util/container-helpers.js';
+import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
 import type * as Container from './types/container.js';
 import type * as CommandBlock from './types/command-block.js';
@@ -15,7 +17,7 @@ import type * as Texture from './types/texture.js';
 import type * as Subtitles from './types/subtitles.js';
 import type * as Labels from './types/labels.js';
 
-export interface ContainerRepackerSettings {
+interface ContainerRepackerSettings {
 	verbose: boolean;
 	skipLogFiles: boolean;
 }
@@ -25,6 +27,18 @@ export class ContainerRepacker {
 	private readonly path: string[] = [];
 	private readonly writeFiles: WriteFile[] = [];
 	private readonly progressLogger?: ProgressLogger;
+
+	static command = new Command()
+		.command('repack <source> [destination]')
+		.description('repack one or more unpacked containers (directory ending with "-m4b")')
+		.option('-v, --verbose', 'verbose output')
+		.option('-L, --skip-log-files', 'skip unpacking of .log files')
+		.action(async (source: string, destination?: string) => {
+			[source, destination] = await resolvePathArguments(source, destination);
+
+			const packer = new ContainerRepacker(source, destination, ContainerRepacker.command.opts() as ContainerRepackerSettings);
+			await packer.run();
+		});
 
 	constructor(
 		private sourceRoot: string,
