@@ -18,7 +18,8 @@ export async function resolvePathArguments(extension: string, source: string, de
 		destination = path.resolve(destination);
 		await checkPath(destination, 'destination');
 	} else {
-		destination = source.endsWith(extension)
+		const sourceEntry = await fsP.stat(source);
+		destination = source.endsWith(extension) && ((extension.startsWith('.') && sourceEntry.isFile()) || (extension.startsWith('-') && sourceEntry.isDirectory()))
 			? path.parse(source).dir
 			: source;
 	}
