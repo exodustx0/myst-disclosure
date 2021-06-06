@@ -23,11 +23,6 @@ interface ContainerRepackerSettings {
 }
 
 export class ContainerRepacker {
-	private readonly tempDir = path.join(fs.realpathSync(os.tmpdir()), `disclosure_${uniqueString()}`);
-	private readonly path: string[] = [];
-	private readonly writeFiles: WriteFile[] = [];
-	private readonly progressLogger?: ProgressLogger;
-
 	static command = new Command()
 		.command('repack <source> [destination]')
 		.description('repack one or more unpacked containers (directory ending with "-m4b")')
@@ -39,6 +34,11 @@ export class ContainerRepacker {
 			const packer = new ContainerRepacker(source, destination, ContainerRepacker.command.opts() as ContainerRepackerSettings);
 			await packer.run();
 		});
+
+	private readonly tempDir = path.join(fs.realpathSync(os.tmpdir()), `disclosure_${uniqueString()}`);
+	private readonly path: string[] = [];
+	private readonly writeFiles: WriteFile[] = [];
+	private readonly progressLogger?: ProgressLogger;
 
 	constructor(
 		private sourceRoot: string,

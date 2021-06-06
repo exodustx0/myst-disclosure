@@ -21,10 +21,6 @@ interface ContainerUnpackerSettings {
 }
 
 export class ContainerUnpacker {
-	private readonly path: string[] = [];
-	private readonly readFiles: ReadFile[] = [];
-	private readonly progressLogger?: ProgressLogger;
-
 	static command = new Command()
 		.command('unpack <source> [destination]')
 		.description('unpack a container or a folder of containers')
@@ -37,6 +33,10 @@ export class ContainerUnpacker {
 			const unpacker = new ContainerUnpacker(source, destination, ContainerUnpacker.command.opts() as ContainerUnpackerSettings);
 			await unpacker.run();
 		});
+
+	private readonly path: string[] = [];
+	private readonly readFiles: ReadFile[] = [];
+	private readonly progressLogger?: ProgressLogger;
 
 	constructor(
 		private sourceRoot: string,
