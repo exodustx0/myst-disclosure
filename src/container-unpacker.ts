@@ -14,7 +14,7 @@ import type * as Texture from './types/texture.js';
 import type * as Subtitles from './types/subtitles.js';
 import type * as Labels from './types/labels.js';
 
-interface ContainerUnpackerSettings {
+interface Settings {
 	verbose: boolean;
 	indexOnly: boolean;
 	skipLogFiles: boolean;
@@ -23,14 +23,14 @@ interface ContainerUnpackerSettings {
 export class ContainerUnpacker {
 	static command = new Command()
 		.command('unpack <source> [destination]')
-		.description('unpack a container or a folder of containers')
+		.description('unpack one or more containers')
 		.option('-v, --verbose', 'verbose output')
 		.option('-i, --index-only', 'only unpack the index of containers')
 		.option('-L, --skip-log-files', 'skip unpacking of .log files')
 		.action(async (source: string, destination?: string) => {
 			[source, destination] = await resolvePathArguments(source, destination);
 
-			const unpacker = new ContainerUnpacker(source, destination, ContainerUnpacker.command.opts() as ContainerUnpackerSettings);
+			const unpacker = new ContainerUnpacker(source, destination, ContainerUnpacker.command.opts() as Settings);
 			await unpacker.run();
 		});
 
@@ -41,7 +41,7 @@ export class ContainerUnpacker {
 	constructor(
 		private sourceRoot: string,
 		private readonly destinationRoot: string,
-		private readonly settings: ContainerUnpackerSettings,
+		private readonly settings: Settings,
 	) {
 		if (this.settings.verbose) this.progressLogger = new ProgressLogger();
 	}

@@ -7,11 +7,9 @@ import { ContainerRepacker } from './container-repacker.js';
 (async () => {
 	program
 		.command('container')
-		.description('container format (.m4b files)')
+		.description('.m4b file')
 		.addCommand(ContainerUnpacker.command)
 		.addCommand(ContainerRepacker.command);
-
-	// TODO: add savefile and options un-/repackers
 
 	await program.parseAsync();
 })().catch(err => {

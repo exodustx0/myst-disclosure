@@ -17,7 +17,7 @@ import type * as Texture from './types/texture.js';
 import type * as Subtitles from './types/subtitles.js';
 import type * as Labels from './types/labels.js';
 
-interface ContainerRepackerSettings {
+interface Settings {
 	verbose: boolean;
 	skipLogFiles: boolean;
 }
@@ -31,7 +31,7 @@ export class ContainerRepacker {
 		.action(async (source: string, destination?: string) => {
 			[source, destination] = await resolvePathArguments(source, destination);
 
-			const packer = new ContainerRepacker(source, destination, ContainerRepacker.command.opts() as ContainerRepackerSettings);
+			const packer = new ContainerRepacker(source, destination, ContainerRepacker.command.opts() as Settings);
 			await packer.run();
 		});
 
@@ -43,7 +43,7 @@ export class ContainerRepacker {
 	constructor(
 		private sourceRoot: string,
 		private readonly destinationRoot: string,
-		private readonly settings: ContainerRepackerSettings,
+		private readonly settings: Settings,
 	) {
 		if (this.settings.verbose) this.progressLogger = new ProgressLogger();
 	}
