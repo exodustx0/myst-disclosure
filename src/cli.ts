@@ -55,7 +55,7 @@ const checkPathArg = async (pathArg: string, type: string) => {
 				destination = path.resolve(destination);
 				await checkPathArg(destination, 'destination');
 			} else {
-				destination = source.endsWith('.m4b')
+				destination = source.endsWith('-m4b')
 					? path.parse(source).dir
 					: source;
 			}
