@@ -20,7 +20,7 @@ TODO: add CLI documentation; for now, use the `-h` flag to get usage info.
 * Install dependencies with any node package manager (e.g. `npm install`, but may I suggest checking out [pnpm](https://pnpm.io/) to save yourselves some pain).
 * Run the app:
   * Run `npm run build` once to compile the TypeScript into JavaScript, then run `node dist/cli [arguments...]`, OR
-  * Run `npm run start -- [arguments...]`. This uses an experimental feature, so this might not work depending on what version of Node you're using; [read this](https://github.com/TypeStrong/ts-node/issues/1007) if you want to know more.
+  * Run `npm run dev -- [arguments...]`. This uses an experimental feature, so this might not work depending on what version of Node you're using; [read this](https://github.com/TypeStrong/ts-node/issues/1007) if you want to know more.
 * Please take effort to follow the ESLint rules.
 * If you use an editor like VSCode that uses a built-in TypeScript server for language features, make sure it uses TS >=4.3 or local TS module.
 

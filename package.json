@@ -6,7 +6,7 @@
 	"description": "Modding tool for Myst IV: Revalation",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "node --loader ts-node/esm ./src/cli.ts",
+		"dev": "node --loader ts-node/esm ./src/cli.ts",
 		"build": "tsc -b"
 	},
 	"bin": {
