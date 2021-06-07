@@ -209,7 +209,6 @@ export class ContainerUnpacker {
 
 			if (this.settings.verbose) this.progressLogger!.tick();
 		}
-
 	}
 
 	////////////////
@@ -249,9 +248,7 @@ export class ContainerUnpacker {
 		} else {
 			await this.readFile.readCharEncHeadered(); // image format
 			await this.readFile.readUInt32(); // image size
-			const fileName = this.path.pop()!;
-			this.path.push(fileName + '.png');
-			await this.writeToFile();
+			await this.writeToFile('.png');
 		}
 	}
 
@@ -389,10 +386,10 @@ export class ContainerUnpacker {
 		});
 	}
 
-	private async writeToFile() {
+	private async writeToFile(newExtension = '') {
 		await this.mkdirIfDoesNotExist(true);
 
-		const writeFile = await WriteFile.open(this.destinationPath);
+		const writeFile = await WriteFile.open(this.destinationPath + newExtension);
 		try {
 			await this.readFile.transfer(writeFile);
 		} finally {

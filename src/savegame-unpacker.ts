@@ -132,6 +132,7 @@ export class SavegameUnpacker {
 		const foundAmuletHints = await this.readFoundAmuletHints();
 		const journalEntries = await this.readJournalEntries();
 
+		this.path.push('savegame.json');
 		await this.writeToJSON<Savegame.JSONFile>({
 			type: 'savegame',
 			title,
@@ -142,6 +143,7 @@ export class SavegameUnpacker {
 			foundAmuletHints,
 			journalEntries,
 		});
+		this.path.pop();
 	}
 
 	private async readTimestamp(): Promise<Savegame.Timestamp> {
@@ -314,15 +316,16 @@ export class SavegameUnpacker {
 	}
 
 	private async readJournalEntries() {
+		this.path.push('journal');
+
 		const journalEntries: Savegame.JournalEntry[] = [];
 		for (let i = 0; i < 999; i++) {
 			const text = await this.readFile.readChar16Headered();
 			const hasPhoto = await this.readFile.readBool();
 			if (hasPhoto) {
-				this.path.push('journal', `${i.toString().padStart(3, '0')}.jpg`);
+				this.path.push(`${i.toString().padStart(3, '0')}.jpg`);
 				const photoSize = await this.readFile.readUInt32();
 				await this.writeToFile(photoSize);
-				this.path.pop();
 				this.path.pop();
 			}
 
@@ -334,6 +337,8 @@ export class SavegameUnpacker {
 				});
 			}
 		}
+
+		this.path.pop();
 
 		return journalEntries;
 	}
@@ -391,6 +396,6 @@ export class SavegameUnpacker {
 
 	private async writeToJSON<T extends object>(object: T) {
 		await this.mkdirIfDoesNotExist(true);
-		await fsP.writeFile(this.destinationPath + '.json', JSON.stringify(object, undefined, '\t'));
+		await fsP.writeFile(this.destinationPath, JSON.stringify(object, undefined, '\t'));
 	}
 }
