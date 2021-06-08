@@ -54,7 +54,7 @@ export class ProgressLogger {
 		this.counters.push(0);
 		this.totals.push(total);
 		
-		if (this.indent === 0) stdout.write(chalk.blue('•'));
+		if (this.indent === 0) stdout.write(chalk.cyan('-'));
 
 		this.indent += 2;
 
