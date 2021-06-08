@@ -1,10 +1,11 @@
 import cliCursor from 'cli-cursor';
-import chalk from 'chalk';
 import { program } from 'commander';
 
 import { ContainerUnpacker } from './container-unpacker.js';
 import { ContainerRepacker } from './container-repacker.js';
 import { SavegameUnpacker } from './savegame-unpacker.js';
+
+import { logError } from './util/wrapped-log.js';
 
 (async () => {
 	cliCursor.hide();
@@ -23,7 +24,7 @@ import { SavegameUnpacker } from './savegame-unpacker.js';
 	await program.parseAsync();
 })().catch(err => {
 	if (typeof err === 'string') {
-		console.error(`[${chalk.red('ERROR')}]`, err);
+		logError(err);
 	} else {
 		console.error(err);
 	}
