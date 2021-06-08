@@ -10,7 +10,7 @@ import type { FixedLengthArray } from 'type-fest';
  * data            | [ab]  | thumbnail               |
  * PositionData    | 0x1   | position data           |
  * uint32          | 0x1   | size of next 3 items    |
- * misc32          | 0x1   | unknown                 | 0x0
+ * misc32          | 0x1   | unknown (state count?)  | 0x0
  * uint32          | 0x1   | state class count       | [ac]
  * StateClass      | [ac]  | state classes           |
  * uint32          | 0x1   | zip point world count   | [ad]
