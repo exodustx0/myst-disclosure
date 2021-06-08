@@ -15,7 +15,7 @@
  * data     | [cb] | image               |
  * }
  * 
- * NOTE: localized textures are stored as .png, not wrapped in .bin
+ * NOTE: localized textures are stored as raw PNG, not wrapped in .bin
  */
 export interface JSONFile {
 	type: 'localized texture reference';

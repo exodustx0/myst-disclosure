@@ -2,7 +2,7 @@
  * uint32 | 0x1 | signature length | 0xB
  * char8  | 0xB | signature        | "UBI_BF_SIG" + NUL
  * uint32 | 0x1 | unknown          | 0x1
- * uint32 | 0x1 | unknown          | 0x0
+ * misc32 | 0x1 | unknown          | 0x0
  * Index  | 0x1 | root index       |
  * data   | ??? | file table       |
  */

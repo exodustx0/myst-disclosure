@@ -28,11 +28,11 @@ export interface Label {
 }
 
 /*
- * uint32 | 0x1  | name length          | [ba]
- * char8  | [ba] | name                 |
- * uint32 | 0x1  | label count          | [bb]
- * uint32 | 0x1  | unknown (subgroups?) | 0x0
- * Label  | [bb] | labels               |
+ * uint32 | 0x1  | name length               | [ba]
+ * char8  | [ba] | name                      |
+ * uint32 | 0x1  | label count               | [bb]
+ * misc32 | 0x1  | unknown (subgroup count?) | 0x0
+ * Label  | [bb] | labels                    |
  */
 export interface Group {
 	name: string;

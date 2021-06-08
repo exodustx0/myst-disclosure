@@ -10,13 +10,13 @@ import type { FixedLengthArray } from 'type-fest';
  * data            | [ab]  | thumbnail               |
  * PositionData    | 0x1   | position data           |
  * uint32          | 0x1   | size of next 3 items    |
- * uint32          | 0x1   | unknown                 | 0x0
+ * misc32          | 0x1   | unknown                 | 0x0
  * uint32          | 0x1   | state class count       | [ac]
  * StateClass      | [ac]  | state classes           |
  * uint32          | 0x1   | zip point world count   | [ad]
  * ZipPointWorld   | [ad]  | zip point worlds        |
  * uint32          | 0x1   | world                   | assumed to be identical to PositionData.world
- * uint32          | 0x1   | unknown                 | 0x0
+ * misc32          | 0x1   | unknown                 | 0x0
  * uint32          | 0x1   | found amulet hint count | [ae]
  * FoundAmuletHint | [ae]  | found amulet hints      |
  * JournalEntry    | 0x3E7 | journal entries         |
@@ -133,7 +133,7 @@ export const enum StateType {
 /*
  * uint32   | 0x1  | name length | [da]
  * char8enc | [da] | name        |
- * uint32   | 0x2  | unknown     | 0x0
+ * misc32   | 0x2  | unknown     | 0x0
  */
 export interface StateUnknown {
 	name: string;
