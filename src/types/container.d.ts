@@ -18,8 +18,8 @@ export interface JSONFile {
  * FileInfo | [ab] | file info structures         |
  */
 export interface Index {
-	dirs: DirInfo[];
-	files: FileInfo[];
+	dirs?: DirInfo[];
+	files?: FileInfo[];
 }
 
 /*

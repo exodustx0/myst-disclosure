@@ -152,20 +152,17 @@ export class ContainerUnpacker {
 	}
 
 	private async readIndex() {
-		const index: Container.Index = {
-			dirs: [],
-			files: [],
-		};
-
 		const numSubDirs = await this.readFile.readUInt8();
+		const subDirs: Container.DirInfo[] = [];
 		for (let subDirIndex = 0; subDirIndex < numSubDirs; subDirIndex++) {
-			index.dirs.push({
+			subDirs.push({
 				name: (await this.readFile.readChar8Headered()).slice(0, -1),
 				index: await this.readIndex(),
 			});
 		}
 
 		const numFiles = await this.readFile.readUInt32();
+		const files: Container.FileInfo[] = [];
 		for (let fileIndex = 0; fileIndex < numFiles; fileIndex++) {
 			const fileInfo: Container.FileInfo = {
 				name: (await this.readFile.readChar8Headered()).slice(0, -1),
@@ -173,8 +170,13 @@ export class ContainerUnpacker {
 				offset: await this.readFile.readUInt32(),
 			};
 
-			if (!fileInfo.name.endsWith('.log') || !this.settings.skipLogFiles) index.files.push(fileInfo);
+			if (!fileInfo.name.endsWith('.log') || !this.settings.skipLogFiles) files.push(fileInfo);
 		}
+
+		const index: Container.Index = {};
+
+		if (subDirs.length > 0) index.dirs = subDirs;
+		if (files.length > 0) index.files = files;
 
 		return index;
 	}
@@ -302,11 +304,12 @@ export class ContainerUnpacker {
 			});
 		}
 
-		await this.writeToJSON<Labels.JSONFile>({
-			type: 'labels',
-			labels,
-			groups,
-		});
+		const json: Labels.JSONFile = { type: 'labels' };
+
+		if (labels.length > 0) json.labels = labels;
+		if (groups.length > 0) json.groups = groups;
+
+		await this.writeToJSON<Labels.JSONFile>(json);
 	}
 
 	private async readLabels(numLabels: number) {
@@ -361,16 +364,20 @@ export class ContainerUnpacker {
 	}
 
 	private *files(index: Container.Index): Generator<Container.FileInfo> {
-		for (const dirInfo of index.dirs) {
-			this.path.push(dirInfo.name);
-			yield* this.files(dirInfo.index);
-			this.path.pop();
+		if (index.dirs) {
+			for (const dirInfo of index.dirs) {
+				this.path.push(dirInfo.name);
+				yield* this.files(dirInfo.index);
+				this.path.pop();
+			}
 		}
 
-		for (const fileInfo of index.files) {
-			this.path.push(fileInfo.name);
-			yield fileInfo;
-			this.path.pop();
+		if (index.files) {
+			for (const fileInfo of index.files) {
+				this.path.push(fileInfo.name);
+				yield fileInfo;
+				this.path.pop();
+			}
 		}
 	}
 

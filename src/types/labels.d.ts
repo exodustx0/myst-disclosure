@@ -12,8 +12,8 @@
  */
 export interface JSONFile {
 	type: 'labels';
-	labels: Label[];
-	groups: Group[];
+	labels?: Label[];
+	groups?: Group[];
 }
 
 /*

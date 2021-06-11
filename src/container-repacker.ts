@@ -155,32 +155,34 @@ export class ContainerRepacker {
 	}
 
 	private async readIndex() {
-		const index: Container.Index = {
-			dirs: [],
-			files: [],
-		};
-
 		const dir = (await fsP.readdir(this.sourcePath, { withFileTypes: true }))
 			.filter(entry => entry.isDirectory() || entry.isFile());
 
+		const subDirs: Container.DirInfo[] = [];
+		const files: Container.FileInfo[] = [];
 		for (const entry of dir) {
 			if (entry.isDirectory() && !entry.name.endsWith('-m4b')) {
 				this.path.push(entry.name);
-				index.dirs.push({
+				subDirs.push({
 					name: entry.name,
 					index: await this.readIndex(),
 				});
 				this.path.pop();
-			} else {
+			} else if (entry.isFile()) {
 				if (entry.name.endsWith('.log') && this.settings.skipLogFiles) continue;
 
-				index.files.push({
+				files.push({
 					name: entry.name,
 					size: 0,
 					offset: 0,
 				});
 			}
 		}
+
+		const index: Container.Index = {};
+
+		if (subDirs.length > 0) index.dirs = subDirs;
+		if (files.length > 0) index.files = files;
 
 		return index;
 	}
@@ -211,20 +213,28 @@ export class ContainerRepacker {
 	}
 
 	private async writeIndexToContainer(index: Container.Index, offset: number) {
-		await this.writeFile.writeUInt8(index.dirs.length);
-		for (const dirInfo of index.dirs) {
-			await this.writeFile.writeChar8Headered(dirInfo.name + '\0');
-			offset = await this.writeIndexToContainer(dirInfo.index, offset);
+		if (index.dirs) {
+			await this.writeFile.writeUInt8(index.dirs.length);
+			for (const dirInfo of index.dirs) {
+				await this.writeFile.writeChar8Headered(dirInfo.name + '\0');
+				offset = await this.writeIndexToContainer(dirInfo.index, offset);
+			}
+		} else {
+			await this.writeFile.writeUInt8(0);
 		}
 
-		await this.writeFile.writeUInt32(index.files.length);
-		for (const fileInfo of index.files) {
-			await this.writeFile.writeChar8Headered(fileInfo.name + '\0');
-			await this.writeFile.writeUInt32(fileInfo.size);
-			await this.writeFile.writeUInt32(offset);
-			offset += fileInfo.size;
-
-			if (this.settings.verbose) this.progressLogger!.tick();
+		if (index.files) {
+			await this.writeFile.writeUInt32(index.files.length);
+			for (const fileInfo of index.files) {
+				await this.writeFile.writeChar8Headered(fileInfo.name + '\0');
+				await this.writeFile.writeUInt32(fileInfo.size);
+				await this.writeFile.writeUInt32(offset);
+				offset += fileInfo.size;
+	
+				if (this.settings.verbose) this.progressLogger!.tick();
+			}
+		} else {
+			await this.writeFile.writeUInt32(0);
 		}
 
 		return offset;
@@ -357,14 +367,16 @@ export class ContainerRepacker {
 			await this.writeFile.writeUInt32(0x1); // unknown
 			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4));
 			await this.writeFile.writeUInt32(0x1); // unknown
-			await this.writeFile.writeUInt32(json.labels.length);
-			await this.writeFile.writeUInt32(json.groups.length);
-			await this.writeLabels(json.labels);
-			for (const group of json.groups) {
-				await this.writeFile.writeChar8Headered(group.name);
-				await this.writeFile.writeUInt32(group.labels.length);
-				await this.writeFile.writeUInt32(0x0); // unknown
-				await this.writeLabels(group.labels);
+			await this.writeFile.writeUInt32(json.labels ? json.labels.length : 0);
+			await this.writeFile.writeUInt32(json.groups ? json.groups.length : 0);
+			if (json.labels) await this.writeLabels(json.labels);
+			if (json.groups) {
+				for (const group of json.groups) {
+					await this.writeFile.writeChar8Headered(group.name);
+					await this.writeFile.writeUInt32(group.labels.length);
+					await this.writeFile.writeUInt32(0x0); // unknown
+					await this.writeLabels(group.labels);
+				}
 			}
 			
 			fileInfo.size = this.writeFile.bytesWritten;
@@ -410,16 +422,20 @@ export class ContainerRepacker {
 	}
 
 	private *files(index: Container.Index): Generator<Container.FileInfo> {
-		for (const dirInfo of index.dirs) {
-			this.path.push(dirInfo.name);
-			yield* this.files(dirInfo.index);
-			this.path.pop();
+		if (index.dirs) {
+			for (const dirInfo of index.dirs) {
+				this.path.push(dirInfo.name);
+				yield* this.files(dirInfo.index);
+				this.path.pop();
+			}
 		}
 
-		for (const fileInfo of index.files) {
-			this.path.push(fileInfo.name);
-			yield fileInfo;
-			this.path.pop();
+		if (index.files) {
+			for (const fileInfo of index.files) {
+				this.path.push(fileInfo.name);
+				yield fileInfo;
+				this.path.pop();
+			}
 		}
 	}
 
