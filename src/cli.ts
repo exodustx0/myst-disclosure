@@ -5,10 +5,10 @@ import { ContainerUnpacker } from './container-unpacker.js';
 import { ContainerRepacker } from './container-repacker.js';
 import { SavegameUnpacker } from './savegame-unpacker.js';
 
-import { logError } from './util/wrapped-log.js';
+import { errorLog } from './util/wrapped-log.js';
 
 (async () => {
-	cliCursor.hide();
+	cliCursor.hide(process.stdout);
 
 	program
 		.command('container')
@@ -24,7 +24,7 @@ import { logError } from './util/wrapped-log.js';
 	await program.parseAsync();
 })().catch(err => {
 	if (typeof err === 'string') {
-		logError(err);
+		errorLog(err);
 	} else {
 		console.error(err);
 	}

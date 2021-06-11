@@ -19,4 +19,4 @@ const logWrap = (logger: (...args: unknown[]) => void, message: string, ...param
 };
 
 export const log      = (message: string, ...params: unknown[]) => logWrap(console.log,                              message,   ...params);
-export const logError = (message: string, ...params: unknown[]) => logWrap(console.error, `[${chalk.red('ERROR')}] ${message}`, ...params);
+export const errorLog = (message: string, ...params: unknown[]) => logWrap(console.error, `[${chalk.red('ERROR')}] ${message}`, ...params);
