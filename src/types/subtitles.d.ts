@@ -13,6 +13,7 @@
 export interface JSONFile {
 	type: 'subtitles';
 	relatedSoundFile: string;
+	sceneLength: number;
 	subtitles: Subtitle[];
 }
 
@@ -24,6 +25,5 @@ export interface JSONFile {
  */
 export interface Subtitle {
 	start: number;
-	end: number;
 	text?: string;
 }

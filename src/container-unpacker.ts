@@ -263,11 +263,11 @@ export class ContainerUnpacker {
 		const relatedSoundFile = await this.readFile.readChar8Headered();
 		const subtitles: Subtitles.Subtitle[] = [];
 		const numSubtitles = await this.readFile.readUInt32();
+		let sceneLength = 0;
 		for (let subtitleIndex = 0; subtitleIndex < numSubtitles; subtitleIndex++) {
-			const subtitle: Subtitles.Subtitle = {
-				start: await this.readFile.readFloat(),
-				end: await this.readFile.readFloat(),
-			};
+			const subtitle: Subtitles.Subtitle = { start: await this.readFile.readFloat() };
+
+			sceneLength = await this.readFile.readFloat();
 
 			const text = await this.readFile.readChar16Headered();
 			if (text.length > 0) subtitle.text = text;
@@ -278,6 +278,7 @@ export class ContainerUnpacker {
 		await this.writeToJSON<Subtitles.JSONFile>({
 			type: 'subtitles',
 			relatedSoundFile,
+			sceneLength,
 			subtitles,
 		});
 	}

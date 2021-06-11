@@ -341,11 +341,17 @@ export class ContainerRepacker {
 			await this.writeFile.writeUInt32(0x1); // unknown
 			await this.writeFile.writeChar8Headered(json.relatedSoundFile);
 			await this.writeFile.writeUInt32(json.subtitles.length);
-			for (const subtitle of json.subtitles) {
-				await this.writeFile.writeFloat(subtitle.start);
-				await this.writeFile.writeFloat(subtitle.end);
-				await this.writeFile.writeChar16Headered(subtitle.text ?? '');
+			let a = json.subtitles[0];
+			for (let subtitleIndex = 1; subtitleIndex < json.subtitles.length; subtitleIndex++) {
+				const b = json.subtitles[subtitleIndex];
+				await this.writeFile.writeFloat(a.start);
+				await this.writeFile.writeFloat(b.start);
+				await this.writeFile.writeChar16Headered(a.text ?? '');
+				a = b;
 			}
+			await this.writeFile.writeFloat(a.start);
+			await this.writeFile.writeFloat(json.sceneLength);
+			await this.writeFile.writeChar16Headered(a.text ?? '');
 			
 			fileInfo.size = this.writeFile.bytesWritten;
 		});
