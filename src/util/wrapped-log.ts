@@ -14,9 +14,10 @@ resize();
 
 process.stdout.on('resize', resize);
 
+const errorPrefix = `[${chalk.red('ERROR')}]`;
+
 const logWrap = (logger: (...args: unknown[]) => void, message: string, ...params: unknown[]) => {
 	logger(wrapAnsi(format(message, ...params), columns, { hard: true, trim: false }));
 };
 
-export const log      = (message: string, ...params: unknown[]) => logWrap(console.log,                              message,   ...params);
-export const errorLog = (message: string, ...params: unknown[]) => logWrap(console.error, `[${chalk.red('ERROR')}] ${message}`, ...params);
+export const errorLog = (message: string, ...params: unknown[]) => logWrap(console.error, `${errorPrefix} ${message}`, ...params);
