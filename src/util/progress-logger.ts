@@ -53,7 +53,7 @@ export class ProgressLogger {
 	levelUp(total: number, item: string) {
 		this.counters.push(0);
 		this.totals.push(total);
-		
+
 		if (this.indent === 0) stdout.write(chalk.cyan('-'));
 
 		this.indent += 2;

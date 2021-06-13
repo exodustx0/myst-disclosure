@@ -174,7 +174,6 @@ export class ContainerUnpacker {
 		}
 
 		const index: Container.Index = {};
-
 		if (subDirs.length > 0) index.dirs = subDirs;
 		if (files.length > 0) index.files = files;
 
@@ -190,7 +189,7 @@ export class ContainerUnpacker {
 					case 'm4b':
 						await this.unpackContainer(fileInfo.offset);
 						break;
-	
+
 					case 'bin':
 						if (this.inBranchOfDirectory(/^command_?blocks?$/)) {
 							await this.readCommandBlockFile();
@@ -204,7 +203,7 @@ export class ContainerUnpacker {
 							await this.writeToFile();
 						}
 						break;
-	
+
 					default: await this.writeToFile(); break;
 				}
 			});
@@ -306,7 +305,6 @@ export class ContainerUnpacker {
 		}
 
 		const json: Labels.JSONFile = { type: 'labels' };
-
 		if (labels.length > 0) json.labels = labels;
 		if (groups.length > 0) json.groups = groups;
 

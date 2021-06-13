@@ -26,7 +26,7 @@ export class SavegameUnpacker {
 
 	private readonly path: string[] = [];
 	private readonly readFiles: ReadFile[] = [];
-	
+
 	private constructor(
 		private sourceRoot: string,
 		private readonly destinationRoot: string,

@@ -144,11 +144,11 @@ export class ContainerRepacker {
 		await this.writeFile.writeChar8Headered('UBI_BF_SIG\0');
 		await this.writeFile.writeUInt32(0x1); // unknown
 		await this.writeFile.writeUInt32(0x0); // unknown
-		
+
 		const index = await this.readIndex();
 
 		if (this.settings.verbose) this.progressLogger!.levelUp(numFilesInIndex(index) * 3, this.currentContainerPath);
-		
+
 		await this.prepareFiles(index);
 		await this.writeIndexToContainer(index, 23 + numBytesInIndex(index));
 		await this.writeFilesToContainer(index);
@@ -230,7 +230,7 @@ export class ContainerRepacker {
 				await this.writeFile.writeUInt32(fileInfo.size);
 				await this.writeFile.writeUInt32(offset);
 				offset += fileInfo.size;
-	
+
 				if (this.settings.verbose) this.progressLogger!.tick();
 			}
 		} else {
@@ -249,7 +249,7 @@ export class ContainerRepacker {
 				await readFile.close();
 			}
 			if (typeof fileInfo.tempPath === 'string') await del(fileInfo.tempPath, { force: true });
-			
+
 			if (this.settings.verbose) this.progressLogger!.tick();
 		}
 	}
@@ -268,16 +268,16 @@ export class ContainerRepacker {
 			!Array.isArray(json.commands)
 		) throw `"${this.sourcePath}" is not a valid command block JSON file.`;
 
-		fileInfo.name = fileInfo.name.slice(0, -5);
+		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x6); // type
 			await this.writeFile.writeUInt32(0x1); // sub-type
-			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4));
+			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4)); // '.bin'
 			await this.writeFile.writeUInt32(json.commands.length);
 			for (const command of json.commands) await this.writeFile.writeCharEncHeadered(command);
-	
+
 			fileInfo.size = this.writeFile.bytesWritten;
 		});
 	}
@@ -294,12 +294,12 @@ export class ContainerRepacker {
 			await this.writeFile.writeUInt32(0x27); // type
 			await this.writeFile.writeUInt32(0x2); // unknown
 			if (fileInfo.name.endsWith('.png')) {
-				await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -8));
-				fileInfo.name = fileInfo.name.slice(0, -4);
+				fileInfo.name = fileInfo.name.slice(0, -4); // '.png'
+				await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4)); // '.bin'
 				await this.writeFile.writeUInt8(0x0); // not localized
 				await this.writeFile.writeCharEncHeadered('png'); // image format
 				await this.writeFile.writeUInt32((await fsP.stat(this.sourcePath)).size); // image size
-	
+
 				const png = await ReadFile.open(this.sourcePath);
 				try {
 					await png.transfer(this.writeFile);
@@ -312,13 +312,13 @@ export class ContainerRepacker {
 					(json.type as string) !== 'localized texture reference' ||
 					typeof json.path !== 'string'
 				) throw `"${this.sourcePath}" is not a valid localized texture reference JSON file.`;
-	
-				fileInfo.name = fileInfo.name.slice(0, -5);
-				await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4));
+
+				fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
+				await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4)); // '.bin'
 				await this.writeFile.writeUInt8(0x1); // localized
 				await this.writeFile.writeChar8Headered(json.path);
 			}
-	
+
 			fileInfo.size = this.writeFile.bytesWritten;
 		});
 	}
@@ -331,13 +331,13 @@ export class ContainerRepacker {
 			!Array.isArray(json.subtitles)
 		) throw `"${this.sourcePath}" is not a valid subtitles JSON file.`;
 
-		fileInfo.name = fileInfo.name.slice(0, -5);
+		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x24); // type
 			await this.writeFile.writeUInt32(0x1); // unknown
-			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4));
+			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4)); // '.bin'
 			await this.writeFile.writeUInt32(0x1); // unknown
 			await this.writeFile.writeChar8Headered(json.relatedSoundFile);
 			await this.writeFile.writeUInt32(json.subtitles.length);
@@ -352,7 +352,7 @@ export class ContainerRepacker {
 			await this.writeFile.writeFloat(a.start);
 			await this.writeFile.writeFloat(json.sceneLength);
 			await this.writeFile.writeChar16Headered(a.text ?? '');
-			
+
 			fileInfo.size = this.writeFile.bytesWritten;
 		});
 	}
@@ -365,16 +365,16 @@ export class ContainerRepacker {
 			!Array.isArray(json.groups)
 		) throw `"${this.sourcePath}" is not a valid labels JSON file.`;
 
-		fileInfo.name = fileInfo.name.slice(0, -5);
+		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x25); // type
 			await this.writeFile.writeUInt32(0x1); // unknown
-			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4));
+			await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4)); // '.bin'
 			await this.writeFile.writeUInt32(0x1); // unknown
-			await this.writeFile.writeUInt32(json.labels ? json.labels.length : 0);
-			await this.writeFile.writeUInt32(json.groups ? json.groups.length : 0);
+			await this.writeFile.writeUInt32(json.labels?.length ?? 0);
+			await this.writeFile.writeUInt32(json.groups?.length ?? 0);
 			if (json.labels) await this.writeLabels(json.labels);
 			if (json.groups) {
 				for (const group of json.groups) {
@@ -384,7 +384,7 @@ export class ContainerRepacker {
 					await this.writeLabels(group.labels);
 				}
 			}
-			
+
 			fileInfo.size = this.writeFile.bytesWritten;
 		});
 	}
@@ -401,12 +401,10 @@ export class ContainerRepacker {
 
 	private async createWriteFile(destinationPath: string, action: () => Promise<void>) {
 		const destinationDir = path.parse(destinationPath).dir;
-		
+
 		await fsP.access(destinationDir, fs.constants.R_OK)
-			.catch(() => {
-				throw `No write permissions for "${destinationDir}".`;
-			});
-		
+			.catch(() => { throw `No write permissions for "${destinationDir}".` });
+
 		this.writeFiles.push(await WriteFile.open(destinationPath));
 
 		try {
