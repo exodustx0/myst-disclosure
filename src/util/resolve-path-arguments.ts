@@ -5,9 +5,18 @@ async function checkPath(pathArg: string, type: string) {
 	await fsP.access(pathArg, fs.constants.F_OK).catch(() => {
 		throw `The ${type} path does not exist.`;
 	});
-	await fsP.access(pathArg, fs.constants.R_OK).catch(() => {
-		throw `The ${type} path cannot be read from.`;
-	});
+
+	if (type === 'source') {
+		await fsP.access(pathArg, fs.constants.R_OK).catch(() => {
+			throw `The ${type} path cannot be read from.`;
+		});
+	} else {
+		if (!(await fsP.stat(pathArg)).isDirectory()) throw 'Destination must be a directory.';
+
+		await fsP.access(pathArg, fs.constants.W_OK).catch(() => {
+			throw `The ${type} path cannot be written to.`;
+		});
+	}
 }
 
 export async function resolvePathArguments(extension: string, source: string, destination?: string) {
