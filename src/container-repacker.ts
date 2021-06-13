@@ -361,9 +361,10 @@ export class ContainerRepacker {
 		const json = await this.readFromJSON<Labels.JSONFile>();
 		if (
 			(json.type as string) !== 'labels' ||
-			!Array.isArray(json.labels) ||
-			!Array.isArray(json.groups)
-		) throw `"${this.sourcePath}" is not a valid labels JSON file.`;
+			(
+				!Array.isArray(json.labels) &&
+				!Array.isArray(json.groups)
+			)
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
