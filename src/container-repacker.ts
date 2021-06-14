@@ -81,8 +81,11 @@ export class ContainerRepacker {
 
 	private async run() {
 		const interruptHandler = () => {
-			del(this.tempDir, { force: true })
-				.catch(() => { throw `Temp directory "${this.tempDir}" could not be deleted.` });
+			try {
+				del.sync(this.tempDir, { force: true });
+			} catch {
+				throw `Temp directory "${this.tempDir}" could not be deleted.`
+			}
 		};
 		process.once('SIGTERM', interruptHandler);
 		process.once('SIGINT', interruptHandler);
