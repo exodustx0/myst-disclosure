@@ -298,9 +298,9 @@ export class ContainerRepacker {
 				await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4)); // '.bin'
 				await this.writeFile.writeUInt8(0x0); // not localized
 				await this.writeFile.writeCharEncHeadered('png'); // image format
-				await this.writeFile.writeUInt32((await fsP.stat(this.sourcePath)).size); // image size
 
 				const png = await ReadFile.open(this.sourcePath);
+				await this.writeFile.writeUInt32(await png.getFileSize());
 				try {
 					await png.transfer(this.writeFile);
 				} finally {

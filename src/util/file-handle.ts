@@ -59,6 +59,10 @@ export class ReadFile {
 		}
 	}
 
+	async getFileSize() {
+		return (await this.fileHandle.stat()).size;
+	}
+
 	////////////////
 	// READ METHODS
 
