@@ -56,6 +56,10 @@ export class ContainerRepacker {
 		return path.join(this.destinationRoot, ...this.path).replace(/-m4b/g, '.m4b');
 	}
 
+	private get pathStr() {
+		return path.join(...this.path);
+	}
+
 	private get currentContainerPath() {
 		let currentContainerPath = this.path[this.path.length - 1];
 		for (let i = this.path.length - 2; i >= 0; i--) {
@@ -266,7 +270,7 @@ export class ContainerRepacker {
 		if (
 			(json.type as string) !== 'command block' ||
 			!Array.isArray(json.commands)
-		) throw `"${this.sourcePath}" is not a valid command block JSON file.`;
+		) throw `"${this.pathStr}" is not a valid command block JSON file.`;
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
@@ -311,7 +315,7 @@ export class ContainerRepacker {
 				if (
 					(json.type as string) !== 'localized texture reference' ||
 					typeof json.path !== 'string'
-				) throw `"${this.sourcePath}" is not a valid localized texture reference JSON file.`;
+				) throw `"${this.pathStr}" is not a valid localized texture reference JSON file.`;
 
 				fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 				await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4)); // '.bin'
@@ -329,7 +333,7 @@ export class ContainerRepacker {
 			(json.type as string) !== 'subtitles' ||
 			typeof json.relatedSoundFile !== 'string' ||
 			!Array.isArray(json.subtitles)
-		) throw `"${this.sourcePath}" is not a valid subtitles JSON file.`;
+		) throw `"${this.pathStr}" is not a valid subtitles JSON file.`;
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
@@ -365,6 +369,7 @@ export class ContainerRepacker {
 				!Array.isArray(json.labels) &&
 				!Array.isArray(json.groups)
 			)
+		) throw `"${this.pathStr}" is not a valid labels JSON file.`;
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
@@ -445,7 +450,7 @@ export class ContainerRepacker {
 	}
 
 	private async readFromJSON<T extends object>() {
-		if (!this.sourcePath.endsWith('.json')) throw `Unexpected file "${this.sourcePath}".`;
+		if (!this.sourcePath.endsWith('.json')) throw `Unexpected file "${this.pathStr}".`;
 		return JSON.parse(await fsP.readFile(this.sourcePath, 'utf8')) as T;
 	}
 }
