@@ -175,7 +175,7 @@ export class ContainerRepacker {
 					index: await this.readIndex(),
 				});
 				this.path.pop();
-			} else if (entry.isFile()) {
+			} else if (entry.isFile() || (entry.isDirectory() && entry.name.endsWith('-m4b'))) {
 				if (entry.name.endsWith('.log') && this.settings.skipLogFiles) continue;
 
 				files.push({
