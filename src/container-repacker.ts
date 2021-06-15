@@ -307,7 +307,7 @@ export class ContainerRepacker {
 				await this.writeFile.writeCharEncHeadered('png'); // image format
 
 				const png = await ReadFile.open(this.sourcePath);
-				await this.writeFile.writeUInt32(await png.getFileSize());
+				await this.writeFile.writeUInt32(png.totalSize);
 				try {
 					await png.transfer(this.writeFile);
 				} finally {

@@ -22,7 +22,11 @@ export class ReadFile {
 	}
 
 	get bytesRead() {
-		return this.internalFileOffset;
+		return this.internalFileOffset - this.startOffset;
+	}
+
+	get totalSize() {
+		return this.endOffset - this.startOffset;
 	}
 
 	static async open(path: PathLike, startOffset?: number, endOffset?: number) {
@@ -57,10 +61,6 @@ export class ReadFile {
 			numBytes -= skipBytes;
 			await this.readBuffer(skipBytes);
 		}
-	}
-
-	async getFileSize() {
-		return (await this.fileHandle.stat()).size;
 	}
 
 	////////////////
