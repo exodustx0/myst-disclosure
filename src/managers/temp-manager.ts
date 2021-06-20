@@ -26,12 +26,13 @@ const createTempDir = () => {
 	process.once('SIGINT', deleteTempDir);
 };
 
-export const tempDir = {
-	get newTempFilePath() {
+export const tempManager = {
+	get newFilePath() {
 		if (tempDirPath === '') createTempDir();
 		return path.join(tempDirPath, uniqueString());
 	},
-	delete() {
+	
+	deleteDir() {
 		if (tempDirPath !== '') {
 			process.removeListener('SIGTERM', deleteTempDir);
 			process.removeListener('SIGINT', deleteTempDir);

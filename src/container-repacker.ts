@@ -6,11 +6,12 @@ import del from 'del';
 
 import { NonFatalError, AnomalyError } from './errors.js';
 
+import { tempManager } from './managers/temp-manager.js';
+
 import { numBytesInIndex, numFilesInIndex } from './util/container-helpers.js';
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { ProgressLogger } from './util/progress-logger.js';
 import { resolvePathArguments } from './util/resolve-path-arguments.js';
-import { tempDir } from './util/temp-dir.js';
 
 import type * as Container from './types/container.js';
 import type * as CommandBlock from './types/command-block.js';
@@ -94,7 +95,7 @@ export class ContainerRepacker {
 
 		if (this.settings.verbose) console.timeEnd('Duration');
 
-		tempDir.delete();
+		tempManager.deleteDir();
 	}
 
 	private async checkDir(root = false) {
@@ -183,7 +184,7 @@ export class ContainerRepacker {
 		for (const fileInfo of this.files(index)) {
 			if (fileInfo.name.endsWith('-m4b')) {
 				fileInfo.name = fileInfo.name.slice(0, -4) + '.m4b';
-				fileInfo.tempPath = tempDir.newTempFilePath;
+				fileInfo.tempPath = tempManager.newFilePath;
 				await this.createWriteFile(fileInfo.tempPath, async () => {
 					await this.packContainer();
 					fileInfo.size = this.writeFile.bytesWritten;
@@ -261,7 +262,7 @@ export class ContainerRepacker {
 		) throw new NonFatalError('JSON_INVALID', this.pathStr, 'command block');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
-		fileInfo.tempPath = tempDir.newTempFilePath;
+		fileInfo.tempPath = tempManager.newFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x6); // type
@@ -280,7 +281,7 @@ export class ContainerRepacker {
 			return;
 		}
 
-		fileInfo.tempPath = tempDir.newTempFilePath;
+		fileInfo.tempPath = tempManager.newFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x27); // type
@@ -331,7 +332,7 @@ export class ContainerRepacker {
 		if (json.subtitles[json.subtitles.length - 1].start > json.sceneLength) throw new AnomalyError('Scene length doesn\'t contain all subtitles');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
-		fileInfo.tempPath = tempDir.newTempFilePath;
+		fileInfo.tempPath = tempManager.newFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x24); // type
@@ -372,7 +373,7 @@ export class ContainerRepacker {
 		) throw new AnomalyError('No labels');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
-		fileInfo.tempPath = tempDir.newTempFilePath;
+		fileInfo.tempPath = tempManager.newFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x25); // type
