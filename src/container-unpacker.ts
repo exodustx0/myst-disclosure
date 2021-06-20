@@ -3,11 +3,11 @@ import path from 'path';
 
 import { Command } from 'commander';
 
-import { NonFatalError } from './errors.js';
+import { NonFatalError, AnomalyError } from './errors.js';
 
+import { numFilesInIndex, getNextFileFromIndex } from './util/container-helpers.js';
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { ProgressLogger } from './util/progress-logger.js';
-import { numFilesInIndex } from './util/container-helpers.js';
 import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
 import type * as Container from './types/container.js';
@@ -123,9 +123,11 @@ export class ContainerUnpacker {
 		const signatureLength = await this.readFile.readUInt32();
 		const signature = await this.readFile.readChar8(0xB);
 		if (signatureLength !== 0xB || signature !== 'UBI_BF_SIG\0') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', this.pathStr, 'container');
-		this.readFile.skip(8); // unknown
+		if (await this.readFile.readUInt32() !== 1) throw new AnomalyError('unknown-1 != 1');
+		if (await this.readFile.readUInt32() !== 0) throw new AnomalyError('unknown-2 != 0');
 
 		const index = await this.readIndex();
+		this.validateIndex(index);
 
 		if (this.settings.verbose) this.progressLogger!.levelUp(numFilesInIndex(index), this.currentContainerPath);
 
@@ -182,6 +184,28 @@ export class ContainerUnpacker {
 		return index;
 	}
 
+	private validateIndex(index: Container.Index) {
+		const numFiles = numFilesInIndex(index);
+		if (numFiles === 0) throw new AnomalyError('No files');
+
+		let offset = 0;
+		let a = getNextFileFromIndex(index, offset)!;
+		for (let i = 0; i < numFiles - 1; i++) {
+			offset = a.offset;
+			const b = getNextFileFromIndex(index, offset)!;
+
+			if (a.offset + a.size !== b.offset) {
+				throw new AnomalyError(
+					a.offset + a.size < b.offset
+						? 'File table contains slack space'
+						: 'File table contains truncated files',
+				);
+			}
+
+			a = b;
+		}
+	}
+
 	private async unpackFiles(index: Container.Index, startOfContainer: number) {
 		for (const fileInfo of this.files(index)) {
 			fileInfo.offset += startOfContainer;
@@ -222,13 +246,21 @@ export class ContainerUnpacker {
 		if (signature !== 'ubi/b0-l') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', this.pathStr, type);
 	}
 
+	private async readInternalFileName() {
+		const filename = await this.readFile.readCharEncHeadered();
+		if (filename !== path.parse(this.path[this.path.length - 1]).name) throw new AnomalyError('internal file name != file name');
+	}
+
 	private async readCommandBlockFile() {
 		await this.readSignature('command block');
-		this.readFile.skip(8); // type and sub-type
-		await this.readFile.readCharEncHeadered(); // copy of filename
+		if (await this.readFile.readUInt32() !== 0x6) throw new AnomalyError('type != 0x6');
+		if (await this.readFile.readUInt32() !== 1) throw new AnomalyError('unknown-1 != 1');
+		await this.readInternalFileName();
 
 		const commands: string[] = [];
 		const numCommands = await this.readFile.readUInt32();
+		if (numCommands === 0) throw new AnomalyError('No commands');
+
 		for (let cmdIndex = 0; cmdIndex < numCommands; cmdIndex++) commands.push(await this.readFile.readCharEncHeadered());
 
 		await this.writeToJSON<CommandBlock.JSONFile>({
@@ -239,8 +271,9 @@ export class ContainerUnpacker {
 
 	private async readTexturesFile() {
 		await this.readSignature('textures');
-		this.readFile.skip(8); // type and sub-type
-		await this.readFile.readCharEncHeadered(); // copy of filename
+		if (await this.readFile.readUInt32() !== 0x27) throw new AnomalyError('type != 0x27');
+		if (await this.readFile.readUInt32() !== 2) throw new AnomalyError('unknown-1 != 2');
+		await this.readInternalFileName();
 		const localized = await this.readFile.readUInt8() === 1;
 
 		if (localized) {
@@ -249,25 +282,29 @@ export class ContainerUnpacker {
 				path: await this.readFile.readChar8Headered(),
 			});
 		} else {
-			await this.readFile.readCharEncHeadered(); // image format
-			await this.readFile.readUInt32(); // image size
+			if (await this.readFile.readCharEncHeadered() !== 'png') throw new AnomalyError('image format != "png"');
+			if (await this.readFile.readUInt32() !== this.readFile.bytesRemaining) throw new AnomalyError('image size != actual size');
 			await this.writeToFile('.png');
 		}
 	}
 
 	private async readSubtitlesFile() {
 		await this.readSignature('subtitle');
-		this.readFile.skip(8); // type and unknown
-		await this.readFile.readCharEncHeadered(); // copy of filename
-		this.readFile.skip(4); // unknown
+		if (await this.readFile.readUInt32() !== 0x24) throw new AnomalyError('type != 0x24');
+		if (await this.readFile.readUInt32() !== 1) throw new AnomalyError('unknown-1 != 1');
+		await this.readInternalFileName();
+		if (await this.readFile.readUInt32() !== 1) throw new AnomalyError('unknown-2 != 1');
 
 		const relatedSoundFile = await this.readFile.readChar8Headered();
 		const subtitles: Subtitles.Subtitle[] = [];
 		const numSubtitles = await this.readFile.readUInt32();
+		if (numSubtitles === 0) throw new AnomalyError('No subtitle parts');
+		
 		let sceneLength = 0;
 		for (let subtitleIndex = 0; subtitleIndex < numSubtitles; subtitleIndex++) {
 			const subtitle: Subtitles.Subtitle = { start: await this.readFile.readFloat() };
 
+			if (subtitleIndex > 0 && sceneLength !== subtitle.start) throw new AnomalyError('Gaps between subtitle parts');
 			sceneLength = await this.readFile.readFloat();
 
 			const text = await this.readFile.readChar16Headered();
@@ -286,9 +323,10 @@ export class ContainerUnpacker {
 
 	private async readLabelsFile() {
 		await this.readSignature('labels');
-		this.readFile.skip(8); // type and unknown
-		await this.readFile.readCharEncHeadered(); // copy of filename
-		this.readFile.skip(4); // unknown
+		if (await this.readFile.readUInt32() !== 0x25) throw new AnomalyError('type != 0x25');
+		if (await this.readFile.readUInt32() !== 1) throw new AnomalyError('unknown-1 != 1');
+		await this.readInternalFileName();
+		if (await this.readFile.readUInt32() !== 1) throw new AnomalyError('unknown-2 != 1');
 
 		let numLabels = await this.readFile.readUInt32();
 		const numGroups = await this.readFile.readUInt32();
@@ -298,13 +336,15 @@ export class ContainerUnpacker {
 		for (let groupIndex = 0; groupIndex < numGroups; groupIndex++) {
 			const name = await this.readFile.readChar8Headered();
 			numLabels = await this.readFile.readUInt32();
-			this.readFile.skip(4); // unknown
+			if (await this.readFile.readUInt32() !== 0) throw new AnomalyError('groups.unknown != 0');
 
 			groups.push({
 				name,
 				labels: await this.readLabels(numLabels),
 			});
 		}
+
+		if (labels.length === 0 && groups.length === 0) throw new AnomalyError('No labels');
 
 		const json: Labels.JSONFile = { type: 'labels' };
 		if (labels.length > 0) json.labels = labels;

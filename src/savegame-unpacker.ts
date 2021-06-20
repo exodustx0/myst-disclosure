@@ -47,17 +47,6 @@ export class SavegameUnpacker {
 		return path.join(...this.path);
 	}
 
-	private get currentSavegamePath() {
-		let currentSavegamePath = this.path[this.path.length - 1];
-		for (let i = this.path.length - 2; i >= 0; i--) {
-			const segment = this.path[i];
-			if (segment.endsWith('.m4s')) break;
-			currentSavegamePath = path.join(segment, currentSavegamePath);
-		}
-
-		return currentSavegamePath;
-	}
-
 	private get readFile() {
 		return this.readFiles[this.readFiles.length - 1];
 	}
@@ -122,13 +111,16 @@ export class SavegameUnpacker {
 
 		const positionData = await this.readPositionData();
 
-		this.readFile.skip(8); // size and unknown
+		const stateDataSize = await this.readFile.readUInt32();
+		const startOfStateData = this.readFile.bytesRead;
+		if (await this.readFile.readUInt32() !== 0) throw new AnomalyError('unknown-1 != 0');
 
 		const stateClasses = await this.readStateClasses();
+		if (this.readFile.bytesRead - startOfStateData !== stateDataSize) throw new AnomalyError('Incorrect state data size');
+
 		const zipPointWorlds = await this.readZipPointWorlds();
 		if (await this.readFile.readUInt32() !== positionData.world) throw new AnomalyError('World values are non-identical');
-
-		this.readFile.skip(4); // unknown
+		if (await this.readFile.readUInt32() !== 0) throw new AnomalyError('unknown-2 != 0');
 
 		const foundAmuletHints = await this.readFoundAmuletHints();
 		const journalEntries = await this.readJournalEntries();
@@ -262,12 +254,15 @@ export class SavegameUnpacker {
 
 	private async readStateUnknowns() {
 		const numUnknowns = await this.readFile.readUInt32();
+		if (numUnknowns !== 0) throw new AnomalyError('stateClasses.unknowns != 0');
+
 		const unknowns: Savegame.StateUnknown[] = [];
 		for (let i = 0; i < numUnknowns; i++) {
 			unknowns.push({
 				name: await this.readFile.readCharEncHeadered(),
 			});
-			this.readFile.skip(8); // unknown
+			if (await this.readFile.readUInt32() !== 0) throw new AnomalyError('stateClasses.unknowns.unknown-1 !=');
+			if (await this.readFile.readUInt32() !== 0) throw new AnomalyError('stateClasses.unknowns.unknown-2 !=');
 		}
 
 		return unknowns.length > 0 ? unknowns : undefined;

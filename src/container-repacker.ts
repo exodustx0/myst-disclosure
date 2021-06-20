@@ -6,11 +6,11 @@ import { Command } from 'commander';
 import del from 'del';
 import uniqueString from 'unique-string';
 
-import { NonFatalError } from './errors.js';
+import { NonFatalError, AnomalyError } from './errors.js';
 
+import { numBytesInIndex, numFilesInIndex } from './util/container-helpers.js';
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { ProgressLogger } from './util/progress-logger.js';
-import { numBytesInIndex, numFilesInIndex } from './util/container-helpers.js';
 import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
 import type * as Container from './types/container.js';
@@ -172,10 +172,15 @@ export class ContainerRepacker {
 		for (const entry of dir) {
 			if (entry.isDirectory() && !entry.name.endsWith('-m4b')) {
 				this.path.push(entry.name);
+
+				const index = await this.readIndex();
+				if (!index.dirs && !index.files) throw new AnomalyError('Empty directory');
+
 				subDirs.push({
 					name: entry.name,
-					index: await this.readIndex(),
+					index,
 				});
+
 				this.path.pop();
 			} else if (entry.isFile() || (entry.isDirectory() && entry.name.endsWith('-m4b'))) {
 				if (entry.name.endsWith('.log') && this.settings.skipLogFiles) continue;
@@ -309,6 +314,8 @@ export class ContainerRepacker {
 				await this.writeFile.writeCharEncHeadered('png'); // image format
 
 				const png = await ReadFile.open(this.sourcePath);
+				if (!await png.equals([0x89, 0x50, 0x4E, 0x47])) throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', this.pathStr, 'PNG');
+
 				await this.writeFile.writeUInt32(png.totalSize);
 				try {
 					await png.transfer(this.writeFile);
@@ -321,6 +328,7 @@ export class ContainerRepacker {
 					(json.type as string) !== 'localized texture reference' ||
 					typeof json.path !== 'string'
 				) throw new NonFatalError('JSON_INVALID', this.pathStr, 'localized texture reference');
+				// TODO: check if `json.path` exists in filesystem, otherwise throw AnomalyError
 
 				fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 				await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4)); // '.bin'
@@ -337,8 +345,12 @@ export class ContainerRepacker {
 		if (
 			(json.type as string) !== 'subtitles' ||
 			typeof json.relatedSoundFile !== 'string' ||
+			typeof json.sceneLength !== 'number' ||
 			!Array.isArray(json.subtitles)
 		) throw new NonFatalError('JSON_INVALID', this.pathStr, 'subtitles');
+		if (json.relatedSoundFile.length === 0) throw new AnomalyError('Missing related sound file');
+		if (json.subtitles.length === 0) throw new AnomalyError('No subtitles');
+		if (json.subtitles[json.subtitles.length - 1].start > json.sceneLength) throw new AnomalyError('Scene length doesn\'t contain all subtitles');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
@@ -354,6 +366,10 @@ export class ContainerRepacker {
 			json.subtitles.push({ start: json.sceneLength });
 			let a = json.subtitles[0];
 			for (let subtitleIndex = 1; subtitleIndex < json.subtitles.length; subtitleIndex++) {
+				if (
+					typeof a.start !== 'number' ||
+					(a.text !== undefined && typeof a.text !== 'string')
+				) throw new NonFatalError('JSON_INVALID', this.pathStr, 'subtitles');
 				const b = json.subtitles[subtitleIndex];
 				await this.writeFile.writeFloat(a.start);
 				await this.writeFile.writeFloat(b.start);
@@ -369,11 +385,13 @@ export class ContainerRepacker {
 		const json = await this.readFromJSON<Labels.JSONFile>();
 		if (
 			(json.type as string) !== 'labels' ||
-			(
-				!Array.isArray(json.labels) &&
-				!Array.isArray(json.groups)
-			)
+			(json.labels !== undefined && !Array.isArray(json.labels)) ||
+			(json.groups !== undefined && !Array.isArray(json.groups))
 		) throw new NonFatalError('JSON_INVALID', this.pathStr, 'labels');
+		if (
+			(!Array.isArray(json.labels) || json.labels.length === 0) &&
+			(!Array.isArray(json.groups) || json.groups.length === 0)
+		) throw new AnomalyError('No labels');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
@@ -388,6 +406,7 @@ export class ContainerRepacker {
 			if (json.labels) await this.writeLabels(json.labels);
 			if (json.groups) {
 				for (const group of json.groups) {
+					if (typeof group.name !== 'string' || !Array.isArray(group.labels)) throw new NonFatalError('JSON_INVALID', this.pathStr, 'labels');
 					await this.writeFile.writeChar8Headered(group.name);
 					await this.writeFile.writeUInt32(group.labels.length);
 					await this.writeFile.writeUInt32(0x0); // unknown
@@ -401,6 +420,7 @@ export class ContainerRepacker {
 
 	private async writeLabels(labels: Labels.Label[]) {
 		for (const label of labels) {
+			if (typeof label.name !== 'string' || typeof label.text !== 'string') throw new NonFatalError('JSON_INVALID', this.pathStr, 'labels');
 			await this.writeFile.writeChar8Headered(label.name);
 			await this.writeFile.writeChar16Headered(label.text);
 		}

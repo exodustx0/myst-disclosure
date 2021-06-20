@@ -17,3 +17,23 @@ export function numBytesInIndex(index: Container.Index) {
 
 	return numBytes;
 }
+
+export function getNextFileFromIndex(index: Container.Index, lastOffset: number) {
+	let next: Container.FileInfo | undefined;
+
+	if (index.dirs) {
+		for (const dirInfo of index.dirs) {
+			const fileInfo = getNextFileFromIndex(dirInfo.index, lastOffset);
+
+			if (fileInfo && fileInfo.offset > lastOffset && (!next || fileInfo.offset < next.offset)) next = fileInfo;
+		}
+	}
+
+	if (index.files) {
+		for (const fileInfo of index.files) {
+			if (fileInfo.offset > lastOffset && (!next || fileInfo.offset < next.offset)) next = fileInfo;
+		}
+	}
+
+	return next;
+}

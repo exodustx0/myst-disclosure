@@ -25,6 +25,10 @@ export class ReadFile {
 		return this.internalFileOffset - this.startOffset;
 	}
 
+	get bytesRemaining() {
+		return this.endOffset - this.internalFileOffset;
+	}
+
 	get totalSize() {
 		return this.endOffset - this.startOffset;
 	}
@@ -53,6 +57,18 @@ export class ReadFile {
 		}
 
 		if (typeof numBytes !== 'number') await this.close();
+	}
+
+	async equals(target: Buffer | number[]) {
+		const backup = this.internalFileOffset;
+		const source = await this.readBuffer(target.length);
+		this.internalFileOffset = backup;
+
+		for (const [i, sourceByte] of source.entries()) {
+			if (sourceByte !== target[i]) return false;
+		}
+
+		return true;
 	}
 
 	skip(numBytes: number) {
