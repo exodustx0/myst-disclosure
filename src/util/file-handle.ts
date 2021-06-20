@@ -55,12 +55,8 @@ export class ReadFile {
 		if (typeof numBytes !== 'number') await this.close();
 	}
 
-	async skip(numBytes: number) {
-		while (numBytes > 0) {
-			const skipBytes = Math.min(numBytes, 0x4000);
-			numBytes -= skipBytes;
-			await this.readBuffer(skipBytes);
-		}
+	skip(numBytes: number) {
+		this.internalFileOffset += numBytes;
 	}
 
 	////////////////

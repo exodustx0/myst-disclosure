@@ -121,7 +121,7 @@ export class ContainerUnpacker {
 		const signatureLength = await this.readFile.readUInt32();
 		const signature = await this.readFile.readChar8(0xB);
 		if (signatureLength !== 0xB || signature !== 'UBI_BF_SIG\0') throw `"${this.pathStr}" is either corrupted or an invalid Myst IV container file.`;
-		await this.readFile.skip(8); // unknown
+		this.readFile.skip(8); // unknown
 
 		const index = await this.readIndex();
 
@@ -222,7 +222,7 @@ export class ContainerUnpacker {
 
 	private async readCommandBlockFile() {
 		await this.readSignature('command block');
-		await this.readFile.skip(8); // type and sub-type
+		this.readFile.skip(8); // type and sub-type
 		await this.readFile.readCharEncHeadered(); // copy of filename
 
 		const commands: string[] = [];
@@ -237,7 +237,7 @@ export class ContainerUnpacker {
 
 	private async readTexturesFile() {
 		await this.readSignature('textures');
-		await this.readFile.skip(8); // type and sub-type
+		this.readFile.skip(8); // type and sub-type
 		await this.readFile.readCharEncHeadered(); // copy of filename
 		const localized = await this.readFile.readUInt8() === 1;
 
@@ -255,9 +255,9 @@ export class ContainerUnpacker {
 
 	private async readSubtitlesFile() {
 		await this.readSignature('subtitle');
-		await this.readFile.skip(8); // type and unknown
+		this.readFile.skip(8); // type and unknown
 		await this.readFile.readCharEncHeadered(); // copy of filename
-		await this.readFile.skip(4); // unknown
+		this.readFile.skip(4); // unknown
 
 		const relatedSoundFile = await this.readFile.readChar8Headered();
 		const subtitles: Subtitles.Subtitle[] = [];
@@ -284,9 +284,9 @@ export class ContainerUnpacker {
 
 	private async readLabelsFile() {
 		await this.readSignature('labels');
-		await this.readFile.skip(8); // type and unknown
+		this.readFile.skip(8); // type and unknown
 		await this.readFile.readCharEncHeadered(); // copy of filename
-		await this.readFile.skip(4); // unknown
+		this.readFile.skip(4); // unknown
 
 		let numLabels = await this.readFile.readUInt32();
 		const numGroups = await this.readFile.readUInt32();
@@ -296,7 +296,7 @@ export class ContainerUnpacker {
 		for (let groupIndex = 0; groupIndex < numGroups; groupIndex++) {
 			const name = await this.readFile.readChar8Headered();
 			numLabels = await this.readFile.readUInt32();
-			await this.readFile.skip(4); // unknown
+			this.readFile.skip(4); // unknown
 
 			groups.push({
 				name,
