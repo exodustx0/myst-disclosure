@@ -1,10 +1,8 @@
 import fs, { promises as fsP } from 'fs';
-import os from 'os';
 import path from 'path';
 
 import { Command } from 'commander';
 import del from 'del';
-import uniqueString from 'unique-string';
 
 import { NonFatalError, AnomalyError } from './errors.js';
 
@@ -12,6 +10,7 @@ import { numBytesInIndex, numFilesInIndex } from './util/container-helpers.js';
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { ProgressLogger } from './util/progress-logger.js';
 import { resolvePathArguments } from './util/resolve-path-arguments.js';
+import { tempDir } from './util/temp-dir.js';
 
 import type * as Container from './types/container.js';
 import type * as CommandBlock from './types/command-block.js';
@@ -37,7 +36,6 @@ export class ContainerRepacker {
 			await packer.run();
 		});
 
-	private readonly tempDir = path.join(fs.realpathSync(os.tmpdir()), `disclosure_${uniqueString()}`);
 	private readonly path: string[] = [];
 	private readonly writeFiles: WriteFile[] = [];
 	private readonly progressLogger?: ProgressLogger;
@@ -73,50 +71,30 @@ export class ContainerRepacker {
 		return currentContainerPath.replace('-m4b', '.m4b');
 	}
 
-	private get tempFilePath() {
-		return path.join(this.tempDir, uniqueString());
-	}
-
 	private get writeFile() {
 		return this.writeFiles[this.writeFiles.length - 1];
 	}
 
 	private async run() {
-		const interruptHandler = () => {
-			try {
-				del.sync(this.tempDir, { force: true });
-			} catch {
-				throw new NonFatalError('TEMP_DIR_DELETE_FAILED', this.tempDir);
-			}
-		};
-		process.once('SIGTERM', interruptHandler);
-		process.once('SIGINT', interruptHandler);
-
 		if (this.settings.verbose) console.time('Duration');
-
-		await fsP.mkdir(this.tempDir);
 
 		const sourceEntry = await fsP.stat(this.sourcePath);
 
 		if (!sourceEntry.isDirectory()) throw new NonFatalError('SOURCE_INVALID_REPACK', 'm4b');
 
-		try {
-			if (this.sourceRoot.endsWith('-m4b')) {
-				this.path.push(path.parse(this.sourceRoot).base);
-				this.sourceRoot = path.parse(this.sourceRoot).dir;
-				await this.createWriteFile(this.destinationPath, async () => {
-					await this.packContainer();
-				});
-			} else {
-				await this.checkDir(true);
-			}
-		} finally {
-			process.removeListener('SIGTERM', interruptHandler);
-			process.removeListener('SIGINT', interruptHandler);
-			interruptHandler();
+		if (this.sourceRoot.endsWith('-m4b')) {
+			this.path.push(path.parse(this.sourceRoot).base);
+			this.sourceRoot = path.parse(this.sourceRoot).dir;
+			await this.createWriteFile(this.destinationPath, async () => {
+				await this.packContainer();
+			});
+		} else {
+			await this.checkDir(true);
 		}
 
 		if (this.settings.verbose) console.timeEnd('Duration');
+
+		tempDir.delete();
 	}
 
 	private async checkDir(root = false) {
@@ -204,8 +182,8 @@ export class ContainerRepacker {
 	private async prepareFiles(index: Container.Index) {
 		for (const fileInfo of this.files(index)) {
 			if (fileInfo.name.endsWith('-m4b')) {
-				fileInfo.tempPath = this.tempFilePath;
 				fileInfo.name = fileInfo.name.slice(0, -4) + '.m4b';
+				fileInfo.tempPath = tempDir.newTempFilePath;
 				await this.createWriteFile(fileInfo.tempPath, async () => {
 					await this.packContainer();
 					fileInfo.size = this.writeFile.bytesWritten;
@@ -283,7 +261,7 @@ export class ContainerRepacker {
 		) throw new NonFatalError('JSON_INVALID', this.pathStr, 'command block');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
-		fileInfo.tempPath = this.tempFilePath;
+		fileInfo.tempPath = tempDir.newTempFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x6); // type
@@ -302,7 +280,7 @@ export class ContainerRepacker {
 			return;
 		}
 
-		fileInfo.tempPath = this.tempFilePath;
+		fileInfo.tempPath = tempDir.newTempFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x27); // type
@@ -353,7 +331,7 @@ export class ContainerRepacker {
 		if (json.subtitles[json.subtitles.length - 1].start > json.sceneLength) throw new AnomalyError('Scene length doesn\'t contain all subtitles');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
-		fileInfo.tempPath = this.tempFilePath;
+		fileInfo.tempPath = tempDir.newTempFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x24); // type
@@ -394,7 +372,7 @@ export class ContainerRepacker {
 		) throw new AnomalyError('No labels');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
-		fileInfo.tempPath = this.tempFilePath;
+		fileInfo.tempPath = tempDir.newTempFilePath;
 		await this.createWriteFile(fileInfo.tempPath, async () => {
 			await this.writeSignature();
 			await this.writeFile.writeUInt32(0x25); // type
