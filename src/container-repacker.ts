@@ -6,6 +6,8 @@ import { Command } from 'commander';
 import del from 'del';
 import uniqueString from 'unique-string';
 
+import { NonFatalError } from './errors.js';
+
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { ProgressLogger } from './util/progress-logger.js';
 import { numBytesInIndex, numFilesInIndex } from './util/container-helpers.js';
@@ -84,7 +86,7 @@ export class ContainerRepacker {
 			try {
 				del.sync(this.tempDir, { force: true });
 			} catch {
-				throw `Temp directory "${this.tempDir}" could not be deleted.`
+				throw new NonFatalError('TEMP_DIR_DELETE_FAILED', this.tempDir);
 			}
 		};
 		process.once('SIGTERM', interruptHandler);
@@ -96,7 +98,7 @@ export class ContainerRepacker {
 
 		const sourceEntry = await fsP.stat(this.sourcePath);
 
-		if (!sourceEntry.isDirectory()) throw 'Source must be an unpacked container or a directory containing unpacked containers.';
+		if (!sourceEntry.isDirectory()) throw new NonFatalError('SOURCE_INVALID_REPACK', 'm4b');
 
 		try {
 			if (this.sourceRoot.endsWith('-m4b')) {
@@ -121,7 +123,7 @@ export class ContainerRepacker {
 		const dir = (await fsP.readdir(this.sourcePath, { withFileTypes: true }))
 			.filter(entry => entry.isDirectory());
 
-		if (root && !dir.some(entry => entry.name.endsWith('-m4b'))) throw 'No unpacked containers in source directory.';
+		if (root && !dir.some(entry => entry.name.endsWith('-m4b'))) throw new NonFatalError('SOURCE_INVALID_REPACK', 'm4b');
 
 		for (const entry of dir) {
 			this.path.push(entry.name);
@@ -273,7 +275,7 @@ export class ContainerRepacker {
 		if (
 			(json.type as string) !== 'command block' ||
 			!Array.isArray(json.commands)
-		) throw `"${this.pathStr}" is not a valid command block JSON file.`;
+		) throw new NonFatalError('JSON_INVALID', this.pathStr, 'command block');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
@@ -318,7 +320,7 @@ export class ContainerRepacker {
 				if (
 					(json.type as string) !== 'localized texture reference' ||
 					typeof json.path !== 'string'
-				) throw `"${this.pathStr}" is not a valid localized texture reference JSON file.`;
+				) throw new NonFatalError('JSON_INVALID', this.pathStr, 'localized texture reference');
 
 				fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 				await this.writeFile.writeCharEncHeadered(fileInfo.name.slice(0, -4)); // '.bin'
@@ -336,7 +338,7 @@ export class ContainerRepacker {
 			(json.type as string) !== 'subtitles' ||
 			typeof json.relatedSoundFile !== 'string' ||
 			!Array.isArray(json.subtitles)
-		) throw `"${this.pathStr}" is not a valid subtitles JSON file.`;
+		) throw new NonFatalError('JSON_INVALID', this.pathStr, 'subtitles');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
@@ -371,7 +373,7 @@ export class ContainerRepacker {
 				!Array.isArray(json.labels) &&
 				!Array.isArray(json.groups)
 			)
-		) throw `"${this.pathStr}" is not a valid labels JSON file.`;
+		) throw new NonFatalError('JSON_INVALID', this.pathStr, 'labels');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = this.tempFilePath;
@@ -411,7 +413,7 @@ export class ContainerRepacker {
 		const destinationDir = path.parse(destinationPath).dir;
 
 		await fsP.access(destinationDir, fs.constants.R_OK)
-			.catch(() => { throw `No write permissions for "${destinationDir}".` });
+			.catch(() => { throw new NonFatalError('NO_WRITE_PERMISSIONS_PATH', destinationDir) });
 
 		this.writeFiles.push(await WriteFile.open(destinationPath));
 
@@ -452,7 +454,7 @@ export class ContainerRepacker {
 	}
 
 	private async readFromJSON<T extends object>() {
-		if (!this.sourcePath.endsWith('.json')) throw `Unexpected file "${this.pathStr}".`;
+		if (!this.sourcePath.endsWith('.json')) throw new NonFatalError('FILE_UNEXPECTED_EXTENSION', this.pathStr, '.json');
 		return JSON.parse(await fsP.readFile(this.sourcePath, 'utf8')) as T;
 	}
 }

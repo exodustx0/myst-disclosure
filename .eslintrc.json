@@ -58,6 +58,7 @@
 			"builtinGlobals": true,
 			"allow": ["err", "resolve", "reject"]
 		}],
+		"no-throw-literal": "error",
 		"no-unreachable": "error",
 		"no-unreachable-loop": "error",
 		"no-unused-vars": ["warn", {

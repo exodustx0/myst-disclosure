@@ -3,6 +3,8 @@ import path from 'path';
 
 import { Command } from 'commander';
 
+import { NonFatalError, AnomalyError } from './errors.js';
+
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
@@ -74,7 +76,7 @@ export class SavegameUnpacker {
 		} else if (sourceEntry.isDirectory() && !this.sourceRoot.endsWith('.m4s')) {
 			await this.checkDir(true);
 		} else {
-			throw 'Source must be a savegame file or a directory containing savegame files.';
+			throw new NonFatalError('SOURCE_INVALID_UNPACK', 'm4s');
 		}
 
 		if (this.settings.verbose) console.timeEnd('Duration');
@@ -84,7 +86,7 @@ export class SavegameUnpacker {
 		const dir = (await fsP.readdir(this.sourcePath, { withFileTypes: true }))
 			.filter(entry => (entry.isDirectory() && !entry.name.startsWith('.m4s')) || (entry.isFile() && entry.name.endsWith('.m4s')));
 
-		if (root && !dir.some(entry => entry.name.endsWith('.m4s'))) throw 'No .m4s files in source directory.';
+		if (root && !dir.some(entry => entry.name.endsWith('.m4s'))) throw new NonFatalError('SOURCE_INVALID_UNPACK', 'm4s');
 
 		for (const entry of dir) {
 			this.path.push(entry.name);
@@ -108,7 +110,7 @@ export class SavegameUnpacker {
 		if (
 			await this.readFile.readChar8(8) !== 'ubi/b0-l' ||
 			await this.readFile.readUInt32() !== 0x3
-		) throw `"${this.pathStr}" is either corrupted or an invalid Myst IV savegame file.`;
+		) throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', this.pathStr, 'savegame');
 
 		const title = await this.readFile.readChar16Headered();
 		const createdAt = await this.readTimestamp();
@@ -120,14 +122,13 @@ export class SavegameUnpacker {
 
 		const positionData = await this.readPositionData();
 
-		await this.readFile.skip(8); // size and unknown
+		this.readFile.skip(8); // size and unknown
 
 		const stateClasses = await this.readStateClasses();
 		const zipPointWorlds = await this.readZipPointWorlds();
-		const world = await this.readFile.readUInt32();
-		if (world !== positionData.world) console.log(`"${this.currentSavegamePath}" has non-identical world values. Please open an issue on GitHub or tell the developers on Discord, with a copy of this savegame file!`);
+		if (await this.readFile.readUInt32() !== positionData.world) throw new AnomalyError('World values are non-identical');
 
-		await this.readFile.skip(4); // unknown
+		this.readFile.skip(4); // unknown
 
 		const foundAmuletHints = await this.readFoundAmuletHints();
 		const journalEntries = await this.readJournalEntries();
@@ -250,7 +251,7 @@ export class SavegameUnpacker {
 				case Savegame.StateType.Char8:
 					state.value = await this.readFile.readChar8Headered(); break;
 				default:
-					throw `"${this.currentSavegamePath}" contains a state with type 0x${(state.type as number).toString(16).toUpperCase()}. Please open an issue on GitHub with this!`;
+					throw new AnomalyError(`Unrecognized StateType 0x${(state.type as number).toString(16).toUpperCase()}`);
 			}
 
 			states.push(state);
@@ -266,7 +267,7 @@ export class SavegameUnpacker {
 			unknowns.push({
 				name: await this.readFile.readCharEncHeadered(),
 			});
-			await this.readFile.skip(8); // unknown
+			this.readFile.skip(8); // unknown
 		}
 
 		return unknowns.length > 0 ? unknowns : undefined;
@@ -360,7 +361,7 @@ export class SavegameUnpacker {
 		sourcePath = sourcePath.slice(0, sourcePath.indexOf('.m4s') + 4);
 
 		await fsP.access(sourcePath, fs.constants.R_OK)
-			.catch(() => { throw `No read permissions for "${sourcePath}".` });
+			.catch(() => { throw new NonFatalError('NO_READ_PERMISSIONS_PATH', sourcePath) });
 
 		this.readFiles.push(await ReadFile.open(sourcePath, start, start + size));
 
@@ -376,7 +377,7 @@ export class SavegameUnpacker {
 			const destinationPath = path.parse(this.destinationPath).dir;
 			fsP.access(destinationPath, fs.constants.F_OK)
 				.then(() => {
-					fsP.access(destinationPath, fs.constants.W_OK).then(resolve).catch(() => reject(`No write permissions for "${destinationPath}".`));
+					fsP.access(destinationPath, fs.constants.W_OK).then(resolve).catch(() => reject(new NonFatalError('NO_WRITE_PERMISSIONS_PATH', destinationPath)));
 				}).catch(() => {
 					fsP.mkdir(destinationPath, { recursive }).then(() => resolve()).catch(reject);
 				});

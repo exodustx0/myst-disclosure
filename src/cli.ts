@@ -1,6 +1,8 @@
 import cliCursor from 'cli-cursor';
 import { program } from 'commander';
 
+import { CustomError } from './errors.js';
+
 import { ContainerUnpacker } from './container-unpacker.js';
 import { ContainerRepacker } from './container-repacker.js';
 import { SavegameUnpacker } from './savegame-unpacker.js';
@@ -26,8 +28,8 @@ program
 	.addHelpCommand(false)
 	.parseAsync()
 	.catch(err => {
-		if (typeof err === 'string') {
-			errorLog(err);
+		if (err instanceof CustomError) {
+			errorLog(err.message);
 		} else {
 			console.error(err);
 		}

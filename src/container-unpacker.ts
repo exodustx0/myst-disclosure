@@ -3,6 +3,8 @@ import path from 'path';
 
 import { Command } from 'commander';
 
+import { NonFatalError } from './errors.js';
+
 import { ReadFile, WriteFile } from './util/file-handle.js';
 import { ProgressLogger } from './util/progress-logger.js';
 import { numFilesInIndex } from './util/container-helpers.js';
@@ -87,7 +89,7 @@ export class ContainerUnpacker {
 		} else if (sourceEntry.isDirectory() && !this.sourceRoot.endsWith('.m4b')) {
 			await this.checkDir(true);
 		} else {
-			throw 'Source must be a container file or a directory containing container files.';
+			throw new NonFatalError('SOURCE_INVALID_UNPACK', 'm4b');
 		}
 
 		if (this.settings.verbose) console.timeEnd('Duration');
@@ -97,7 +99,7 @@ export class ContainerUnpacker {
 		const dir = (await fsP.readdir(this.sourcePath, { withFileTypes: true }))
 			.filter(entry => (entry.isDirectory() && !entry.name.startsWith('.m4b')) || (entry.isFile() && entry.name.endsWith('.m4b')));
 
-		if (root && !dir.some(entry => entry.name.endsWith('.m4b'))) throw 'No .m4b files in source directory.';
+		if (root && !dir.some(entry => entry.name.endsWith('.m4b'))) throw new NonFatalError('SOURCE_INVALID_UNPACK', 'm4b');
 
 		for (const entry of dir) {
 			this.path.push(entry.name);
@@ -120,7 +122,7 @@ export class ContainerUnpacker {
 	private async unpackContainer(startOfContainer = 0) {
 		const signatureLength = await this.readFile.readUInt32();
 		const signature = await this.readFile.readChar8(0xB);
-		if (signatureLength !== 0xB || signature !== 'UBI_BF_SIG\0') throw `"${this.pathStr}" is either corrupted or an invalid Myst IV container file.`;
+		if (signatureLength !== 0xB || signature !== 'UBI_BF_SIG\0') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', this.pathStr, 'container');
 		this.readFile.skip(8); // unknown
 
 		const index = await this.readIndex();
@@ -217,7 +219,7 @@ export class ContainerUnpacker {
 
 	private async readSignature(type: string) {
 		const signature = await this.readFile.readChar8(8);
-		if (signature !== 'ubi/b0-l') throw `"${this.pathStr}" is either corrupted or an invalid ${type} file.`;
+		if (signature !== 'ubi/b0-l') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', this.pathStr, type);
 	}
 
 	private async readCommandBlockFile() {
@@ -340,7 +342,7 @@ export class ContainerUnpacker {
 		sourcePath = sourcePath.slice(0, sourcePath.indexOf('.m4b') + 4);
 
 		await fsP.access(sourcePath, fs.constants.R_OK)
-			.catch(() => { throw `No read permissions for "${sourcePath}".` });
+			.catch(() => { throw new NonFatalError('NO_READ_PERMISSIONS_PATH', sourcePath) });
 
 		this.readFiles.push(await ReadFile.open(sourcePath, start, start + size));
 
@@ -385,7 +387,7 @@ export class ContainerUnpacker {
 			const destinationPath = path.parse(this.destinationPath).dir;
 			fsP.access(destinationPath, fs.constants.F_OK)
 				.then(() => {
-					fsP.access(destinationPath, fs.constants.W_OK).then(resolve).catch(() => reject(`No write permissions for "${destinationPath}".`));
+					fsP.access(destinationPath, fs.constants.W_OK).then(resolve).catch(() => reject(new NonFatalError('NO_WRITE_PERMISSIONS_PATH', destinationPath)));
 				}).catch(() => {
 					fsP.mkdir(destinationPath, { recursive }).then(() => resolve()).catch(reject);
 				});
