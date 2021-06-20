@@ -148,8 +148,9 @@ export class ReadFile {
 
 export class WriteFile {
 	private internalFileOffset = 0;
-	private internalFileSum = 0;
+	private internalSum = 0;
 	private closed = false;
+	sumBytes = false;
 
 	private constructor(
 		private readonly fileHandle: fsP.FileHandle,
@@ -157,10 +158,6 @@ export class WriteFile {
 
 	get bytesWritten() {
 		return this.internalFileOffset;
-	}
-
-	get fileSum() {
-		return this.internalFileSum;
 	}
 
 	static async open(path: PathLike) {
@@ -186,7 +183,7 @@ export class WriteFile {
 		if (buffer.length === 0) return;
 
 		await this.fileHandle.write(buffer);
-		for (const byte of buffer) this.internalFileSum += byte;
+		if (this.sumBytes) for (const byte of buffer) this.internalSum += byte;
 		this.internalFileOffset += buffer.length;
 	}
 
@@ -258,5 +255,9 @@ export class WriteFile {
 	async writeCharEncHeadered(value: string) {
 		await this.writeUInt32(value.length);
 		await this.writeCharEnc(value);
+	}
+
+	async writeSum32() {
+		await this.writeUInt32(this.internalSum);
 	}
 }
