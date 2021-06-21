@@ -3,6 +3,8 @@ import { program } from 'commander';
 
 import { CustomError } from './errors.js';
 
+import { tempManager } from './managers/temp-manager.js';
+
 import { ContainerUnpacker } from './container-unpacker.js';
 import { ContainerRepacker } from './container-repacker.js';
 import { SavegameUnpacker } from './savegame-unpacker.js';
@@ -33,4 +35,5 @@ program
 		} else {
 			console.error(err);
 		}
-	});
+	})
+	.finally(() => tempManager.deleteDir());

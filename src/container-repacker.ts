@@ -94,8 +94,6 @@ export class ContainerRepacker {
 		}
 
 		if (this.settings.verbose) console.timeEnd('Duration');
-
-		tempManager.deleteDir();
 	}
 
 	private async checkDir(root = false) {
