@@ -205,8 +205,6 @@ export class ContainerUnpacker {
 
 		const commands: string[] = [];
 		const numCommands = await this.readFile.readUInt32();
-		if (numCommands === 0) throw new AnomalyError('No commands');
-
 		for (let cmdIndex = 0; cmdIndex < numCommands; cmdIndex++) commands.push(await this.readFile.readCharEncHeadered());
 
 		await this.writeToJSON<CommandBlock.JSONFile>({
