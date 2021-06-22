@@ -218,7 +218,7 @@ export class ContainerUnpacker {
 		if (await this.readFile.readUInt32() !== 0x27) throw new AnomalyError('type != 0x27');
 		if (await this.readFile.readUInt32() !== 2) throw new AnomalyError('unknown-1 != 2');
 		await this.readInternalFileName();
-		const localized = await this.readFile.readUInt8() === 1;
+		const localized = await this.readFile.readBool();
 
 		if (localized) {
 			await this.writeToJSON<Texture.JSONFile>({
@@ -243,7 +243,7 @@ export class ContainerUnpacker {
 		const subtitles: Subtitles.Subtitle[] = [];
 		const numSubtitles = await this.readFile.readUInt32();
 		if (numSubtitles === 0) throw new AnomalyError('No subtitle parts');
-		
+
 		let sceneLength = 0;
 		for (let subtitleIndex = 0; subtitleIndex < numSubtitles; subtitleIndex++) {
 			const subtitle: Subtitles.Subtitle = { start: await this.readFile.readFloat() };

@@ -52,7 +52,7 @@ export class ContainerRepacker {
 
 	private async run() {
 		if (this.settings.verbose) console.time('Duration');
-		
+
 		await pathManager.forEachSourceFile(async () => {
 			await this.createWriteFile(pathManager.destination, async () => {
 				await this.packContainer();

@@ -31,7 +31,7 @@ export const tempManager = {
 		if (tempDirPath === '') createTempDir();
 		return path.join(tempDirPath, uniqueString());
 	},
-	
+
 	deleteDir() {
 		if (tempDirPath !== '') {
 			process.removeListener('SIGTERM', deleteTempDir);

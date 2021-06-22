@@ -212,7 +212,7 @@ export class SavegameUnpacker {
 		const numUnknowns = await this.readFile.readUInt32();
 		if (numUnknowns !== 0) throw new AnomalyError('stateClasses.unknowns != 0');
 
-		const unknowns: Savegame.StateUnknown[] = [];
+		const unknowns: Savegame.Unknown[] = [];
 		for (let i = 0; i < numUnknowns; i++) {
 			unknowns.push({
 				name: await this.readFile.readCharEncHeadered(),

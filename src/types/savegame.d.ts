@@ -86,7 +86,7 @@ export interface PositionData {
 export interface StateClass {
 	name: string;
 	states: State[];
-	unknowns?: StateUnknown[];
+	unknowns?: Unknown[];
 }
 
 /*
@@ -94,21 +94,21 @@ export interface StateClass {
  * char8enc  | [ca] | name         |
  * uint8     | 0x1  | type         | [cb]
  * switch (type) {
- * case 0x1:
+ *  case 0x1:
  * uint8     | 0x1  | value        |
- * case 0x3:
+ *  case 0x3:
  * uint32    | 0x1  | value        |
- * case 0x4:
+ *  case 0x4:
  * int8      | 0x1  | value        |
- * case 0x6:
+ *  case 0x6:
  * int32     | 0x1  | value        |
- * case 0x7:
+ *  case 0x7:
  * float     | 0x1  | value        |
- * case 0x9:
+ *  case 0x9:
  * uint8     | 0x1  | value        | bool (0 or 1)
- * case 0x11:
+ *  case 0x11:
  * float     | 0x3  | value        |
- * case 0x13:
+ *  case 0x13:
  * uint32    | 0x1  | value length | [cc]
  * char8     | [cc] | value        |
  * }
@@ -135,7 +135,7 @@ export const enum StateType {
  * char8enc | [da] | name        |
  * misc32   | 0x2  | unknown     | 0x0
  */
-export interface StateUnknown {
+export interface Unknown {
 	name: string;
 }
 

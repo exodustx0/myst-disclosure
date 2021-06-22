@@ -80,7 +80,7 @@ const mkdirIfDoesNotExist = () => {
 const iterateOverDirectory = async (callback: () => Promise<void>, root = true) => {
 	const dir = (await fsP.readdir(path.join(source, ...pathSegments), { withFileTypes: true }))
 		.filter(isUnpacking()
-			? entry => 
+			? entry =>
 				(entry.isDirectory() && !entry.name.startsWith(sourceExtension)) ||
 				(entry.isFile() && entry.name.endsWith(sourceExtension))
 			: entry => entry.isDirectory(),
@@ -117,7 +117,7 @@ export const pathManager = {
 
 		source = path.resolve(sourceArg);
 		await checkPath(source, 'source');
-	
+
 		if (typeof destinationArg === 'string') {
 			destination = path.resolve(destinationArg);
 			await checkPath(destination, 'destination');
