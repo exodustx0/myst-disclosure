@@ -369,7 +369,7 @@ export class SavegameUnpacker {
 	}
 
 	private async writeToFile(numBytes: number) {
-		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir, true);
+		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir);
 
 		const writeFile = await WriteFile.open(this.destinationPath);
 		try {
@@ -380,7 +380,7 @@ export class SavegameUnpacker {
 	}
 
 	private async writeToJSON<T extends object>(object: T) {
-		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir, true);
+		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir);
 		await fsP.writeFile(this.destinationPath, JSON.stringify(object, undefined, '\t'));
 	}
 }

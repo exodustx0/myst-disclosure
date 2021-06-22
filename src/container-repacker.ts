@@ -107,7 +107,7 @@ export class ContainerRepacker {
 			this.path.push(entry.name);
 
 			if (entry.name.endsWith('-m4b')) {
-				if (!root) await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir, true);
+				if (!root) await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir);
 
 				await this.createWriteFile(this.destinationPath, async () => {
 					await this.packContainer();

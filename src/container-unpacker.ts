@@ -424,7 +424,7 @@ export class ContainerUnpacker {
 	}
 
 	private async writeToFile(newExtension = '') {
-		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir, true);
+		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir);
 
 		const writeFile = await WriteFile.open(this.destinationPath + newExtension);
 		try {
@@ -435,7 +435,7 @@ export class ContainerUnpacker {
 	}
 
 	private async writeToJSON<T extends object>(object: T) {
-		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir, true);
+		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir);
 		await fsP.writeFile(this.destinationPath + '.json', JSON.stringify(object, undefined, '\t'));
 	}
 }
