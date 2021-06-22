@@ -10,6 +10,7 @@ import { tempManager } from './managers/temp-manager.js';
 
 import { numBytesInIndex, numFilesInIndex } from './util/container-helpers.js';
 import { ReadFile, WriteFile } from './util/file-handle.js';
+import { mkdirIfDoesNotExist } from './util/mkdir-if-does-not-exist.js';
 import { ProgressLogger } from './util/progress-logger.js';
 import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
@@ -106,12 +107,8 @@ export class ContainerRepacker {
 			this.path.push(entry.name);
 
 			if (entry.name.endsWith('-m4b')) {
-				if (!root) {
-					const destinationDir = path.parse(this.destinationPath).dir;
-					await fsP.access(destinationDir).catch(async () => {
-						await fsP.mkdir(destinationDir, { recursive: true });
-					});
-				}
+				if (!root) await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir, true);
+
 				await this.createWriteFile(this.destinationPath, async () => {
 					await this.packContainer();
 				});

@@ -7,6 +7,7 @@ import { NonFatalError, AnomalyError } from './errors.js';
 
 import { numFilesInIndex, getNextFileFromIndex } from './util/container-helpers.js';
 import { ReadFile, WriteFile } from './util/file-handle.js';
+import { mkdirIfDoesNotExist } from './util/mkdir-if-does-not-exist.js';
 import { ProgressLogger } from './util/progress-logger.js';
 import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
@@ -422,20 +423,8 @@ export class ContainerUnpacker {
 		}
 	}
 
-	private mkdirIfDoesNotExist(recursive = false) {
-		return new Promise<void>((resolve, reject) => {
-			const destinationPath = path.parse(this.destinationPath).dir;
-			fsP.access(destinationPath, fs.constants.F_OK)
-				.then(() => {
-					fsP.access(destinationPath, fs.constants.W_OK).then(resolve).catch(() => reject(new NonFatalError('NO_WRITE_PERMISSIONS_PATH', destinationPath)));
-				}).catch(() => {
-					fsP.mkdir(destinationPath, { recursive }).then(() => resolve()).catch(reject);
-				});
-		});
-	}
-
 	private async writeToFile(newExtension = '') {
-		await this.mkdirIfDoesNotExist(true);
+		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir, true);
 
 		const writeFile = await WriteFile.open(this.destinationPath + newExtension);
 		try {
@@ -446,7 +435,7 @@ export class ContainerUnpacker {
 	}
 
 	private async writeToJSON<T extends object>(object: T) {
-		await this.mkdirIfDoesNotExist(true);
+		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir, true);
 		await fsP.writeFile(this.destinationPath + '.json', JSON.stringify(object, undefined, '\t'));
 	}
 }

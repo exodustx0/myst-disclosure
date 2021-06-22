@@ -6,6 +6,7 @@ import { Command } from 'commander';
 import { NonFatalError, AnomalyError } from './errors.js';
 
 import { ReadFile, WriteFile } from './util/file-handle.js';
+import { mkdirIfDoesNotExist } from './util/mkdir-if-does-not-exist.js';
 import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
 import * as Savegame from './types/savegame.js';
@@ -367,20 +368,8 @@ export class SavegameUnpacker {
 		}
 	}
 
-	private mkdirIfDoesNotExist(recursive = false) {
-		return new Promise<void>((resolve, reject) => {
-			const destinationPath = path.parse(this.destinationPath).dir;
-			fsP.access(destinationPath, fs.constants.F_OK)
-				.then(() => {
-					fsP.access(destinationPath, fs.constants.W_OK).then(resolve).catch(() => reject(new NonFatalError('NO_WRITE_PERMISSIONS_PATH', destinationPath)));
-				}).catch(() => {
-					fsP.mkdir(destinationPath, { recursive }).then(() => resolve()).catch(reject);
-				});
-		});
-	}
-
 	private async writeToFile(numBytes: number) {
-		await this.mkdirIfDoesNotExist(true);
+		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir, true);
 
 		const writeFile = await WriteFile.open(this.destinationPath);
 		try {
@@ -391,7 +380,7 @@ export class SavegameUnpacker {
 	}
 
 	private async writeToJSON<T extends object>(object: T) {
-		await this.mkdirIfDoesNotExist(true);
+		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir, true);
 		await fsP.writeFile(this.destinationPath, JSON.stringify(object, undefined, '\t'));
 	}
 }
