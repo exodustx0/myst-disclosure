@@ -6,13 +6,12 @@ import del from 'del';
 
 import { NonFatalError, AnomalyError } from './errors.js';
 
+import { pathManager } from './managers/path-manager.js';
 import { tempManager } from './managers/temp-manager.js';
 
 import { numBytesInIndex, numFilesInIndex } from './util/container-helpers.js';
 import { ReadFile, WriteFile } from './util/file-handle.js';
-import { mkdirIfDoesNotExist } from './util/mkdir-if-does-not-exist.js';
 import { ProgressLogger } from './util/progress-logger.js';
-import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
 import type * as Container from './types/container.js';
 import type * as CommandBlock from './types/command-block.js';
@@ -32,45 +31,19 @@ export class ContainerRepacker {
 		.option('-v, --verbose', 'verbose output')
 		.option('-L, --skip-log-files', 'skip repacking of .log files')
 		.action(async (source: string, destination?: string) => {
-			[source, destination] = await resolvePathArguments('-m4b', source, destination);
+			await pathManager.init('m4b', 'repack', source, destination);
 
-			const packer = new ContainerRepacker(source, destination, ContainerRepacker.command.opts() as Settings);
+			const packer = new ContainerRepacker(ContainerRepacker.command.opts() as Settings);
 			await packer.run();
 		});
 
-	private readonly path: string[] = [];
 	private readonly writeFiles: WriteFile[] = [];
 	private readonly progressLogger?: ProgressLogger;
 
 	private constructor(
-		private sourceRoot: string,
-		private readonly destinationRoot: string,
 		private readonly settings: Settings,
 	) {
 		if (this.settings.verbose) this.progressLogger = new ProgressLogger();
-	}
-
-	private get sourcePath() {
-		return path.join(this.sourceRoot, ...this.path);
-	}
-
-	private get destinationPath() {
-		return path.join(this.destinationRoot, ...this.path).replace(/-m4b/g, '.m4b');
-	}
-
-	private get pathStr() {
-		return path.join(...this.path);
-	}
-
-	private get currentContainerPath() {
-		let currentContainerPath = this.path[this.path.length - 1];
-		for (let i = this.path.length - 2; i >= 0; i--) {
-			const segment = this.path[i];
-			if (segment.endsWith('-m4b')) break;
-			currentContainerPath = path.join(segment, currentContainerPath);
-		}
-
-		return currentContainerPath.replace('-m4b', '.m4b');
 	}
 
 	private get writeFile() {
@@ -79,45 +52,14 @@ export class ContainerRepacker {
 
 	private async run() {
 		if (this.settings.verbose) console.time('Duration');
-
-		const sourceEntry = await fsP.stat(this.sourcePath);
-
-		if (!sourceEntry.isDirectory()) throw new NonFatalError('SOURCE_INVALID_REPACK', 'm4b');
-
-		if (this.sourceRoot.endsWith('-m4b')) {
-			this.path.push(path.parse(this.sourceRoot).base);
-			this.sourceRoot = path.parse(this.sourceRoot).dir;
-			await this.createWriteFile(this.destinationPath, async () => {
+		
+		await pathManager.forEachSourceFile(async () => {
+			await this.createWriteFile(pathManager.destination, async () => {
 				await this.packContainer();
 			});
-		} else {
-			await this.checkDir(true);
-		}
+		});
 
 		if (this.settings.verbose) console.timeEnd('Duration');
-	}
-
-	private async checkDir(root = false) {
-		const dir = (await fsP.readdir(this.sourcePath, { withFileTypes: true }))
-			.filter(entry => entry.isDirectory());
-
-		if (root && !dir.some(entry => entry.name.endsWith('-m4b'))) throw new NonFatalError('SOURCE_INVALID_REPACK', 'm4b');
-
-		for (const entry of dir) {
-			this.path.push(entry.name);
-
-			if (entry.name.endsWith('-m4b')) {
-				if (!root) await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir);
-
-				await this.createWriteFile(this.destinationPath, async () => {
-					await this.packContainer();
-				});
-			} else {
-				await this.checkDir();
-			}
-
-			this.path.pop();
-		}
 	}
 
 	/////////////
@@ -130,7 +72,7 @@ export class ContainerRepacker {
 
 		const index = await this.readIndex();
 
-		if (this.settings.verbose) this.progressLogger!.levelUp(numFilesInIndex(index) * 3, this.currentContainerPath);
+		if (this.settings.verbose) this.progressLogger!.levelUp(numFilesInIndex(index) * 3, pathManager.currentDeepestItemPath);
 
 		await this.prepareFiles(index);
 		await this.writeIndexToContainer(index, 23 + numBytesInIndex(index));
@@ -138,14 +80,14 @@ export class ContainerRepacker {
 	}
 
 	private async readIndex() {
-		const dir = (await fsP.readdir(this.sourcePath, { withFileTypes: true }))
+		const dir = (await fsP.readdir(pathManager.source, { withFileTypes: true }))
 			.filter(entry => entry.isDirectory() || entry.isFile());
 
 		const subDirs: Container.DirInfo[] = [];
 		const files: Container.FileInfo[] = [];
 		for (const entry of dir) {
 			if (entry.isDirectory() && !entry.name.endsWith('-m4b')) {
-				this.path.push(entry.name);
+				pathManager.pushSegment(entry.name);
 
 				const index = await this.readIndex();
 				if (!index.dirs && !index.files) throw new AnomalyError('Empty directory');
@@ -155,7 +97,7 @@ export class ContainerRepacker {
 					index,
 				});
 
-				this.path.pop();
+				pathManager.popSegment();
 			} else if (entry.isFile() || (entry.isDirectory() && entry.name.endsWith('-m4b'))) {
 				if (entry.name.endsWith('.log') && this.settings.skipLogFiles) continue;
 
@@ -184,16 +126,16 @@ export class ContainerRepacker {
 					await this.packContainer();
 					fileInfo.size = this.writeFile.bytesWritten;
 				});
-			} else if (this.inBranchOfDirectory(/^command_?blocks?$/)) {
+			} else if (pathManager.inBranchOfDirectory(/^command_?blocks?$/)) {
 				await this.writeCommandBlockFile(fileInfo);
-			} else if (this.inBranchOfDirectory('textures')) {
+			} else if (pathManager.inBranchOfDirectory('textures')) {
 				await this.writeTexturesFile(fileInfo);
-			} else if (this.inBranchOfDirectory('subtitle')) {
+			} else if (pathManager.inBranchOfDirectory('subtitle')) {
 				await this.writeSubtitlesFile(fileInfo);
-			} else if (this.inBranchOfDirectory('text')) {
+			} else if (pathManager.inBranchOfDirectory('text')) {
 				await this.writeLabelsFile(fileInfo);
 			} else {
-				fileInfo.size = (await fsP.stat(this.sourcePath)).size;
+				fileInfo.size = (await fsP.stat(pathManager.source)).size;
 			}
 
 			if (this.settings.verbose) this.progressLogger!.tick();
@@ -230,7 +172,7 @@ export class ContainerRepacker {
 
 	private async writeFilesToContainer(index: Container.Index) {
 		for (const fileInfo of this.files(index)) {
-			const readFile = await ReadFile.open(fileInfo.tempPath ?? this.sourcePath);
+			const readFile = await ReadFile.open(fileInfo.tempPath ?? pathManager.source);
 			try {
 				await readFile.transfer(this.writeFile);
 			} finally {
@@ -254,7 +196,7 @@ export class ContainerRepacker {
 		if (
 			(json.type as string) !== 'command block' ||
 			!Array.isArray(json.commands)
-		) throw new NonFatalError('JSON_INVALID', this.pathStr, 'command block');
+		) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'command block');
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = tempManager.newFilePath;
@@ -272,7 +214,7 @@ export class ContainerRepacker {
 
 	private async writeTexturesFile(fileInfo: Container.FileInfo) {
 		if (!fileInfo.name.includes('.bin')) {
-			fileInfo.size = (await fsP.stat(this.sourcePath)).size;
+			fileInfo.size = (await fsP.stat(pathManager.source)).size;
 			return;
 		}
 
@@ -287,8 +229,8 @@ export class ContainerRepacker {
 				await this.writeFile.writeUInt8(0x0); // not localized
 				await this.writeFile.writeCharEncHeadered('png'); // image format
 
-				const png = await ReadFile.open(this.sourcePath);
-				if (!await png.equals([0x89, 0x50, 0x4E, 0x47])) throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', this.pathStr, 'PNG');
+				const png = await ReadFile.open(pathManager.source);
+				if (!await png.equals([0x89, 0x50, 0x4E, 0x47])) throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', pathManager.pathString, 'PNG');
 
 				await this.writeFile.writeUInt32(png.totalSize);
 				try {
@@ -301,7 +243,7 @@ export class ContainerRepacker {
 				if (
 					(json.type as string) !== 'localized texture reference' ||
 					typeof json.path !== 'string'
-				) throw new NonFatalError('JSON_INVALID', this.pathStr, 'localized texture reference');
+				) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'localized texture reference');
 				// TODO: check if `json.path` exists in filesystem, otherwise throw AnomalyError
 
 				fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
@@ -321,7 +263,7 @@ export class ContainerRepacker {
 			typeof json.relatedSoundFile !== 'string' ||
 			typeof json.sceneLength !== 'number' ||
 			!Array.isArray(json.subtitles)
-		) throw new NonFatalError('JSON_INVALID', this.pathStr, 'subtitles');
+		) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'subtitles');
 		if (json.relatedSoundFile.length === 0) throw new AnomalyError('Missing related sound file');
 		if (json.subtitles.length === 0) throw new AnomalyError('No subtitles');
 		if (json.subtitles[json.subtitles.length - 1].start > json.sceneLength) throw new AnomalyError('Scene length doesn\'t contain all subtitles');
@@ -343,7 +285,7 @@ export class ContainerRepacker {
 				if (
 					typeof a.start !== 'number' ||
 					(a.text !== undefined && typeof a.text !== 'string')
-				) throw new NonFatalError('JSON_INVALID', this.pathStr, 'subtitles');
+				) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'subtitles');
 				const b = json.subtitles[subtitleIndex];
 				await this.writeFile.writeFloat(a.start);
 				await this.writeFile.writeFloat(b.start);
@@ -361,7 +303,7 @@ export class ContainerRepacker {
 			(json.type as string) !== 'labels' ||
 			(json.labels !== undefined && !Array.isArray(json.labels)) ||
 			(json.groups !== undefined && !Array.isArray(json.groups))
-		) throw new NonFatalError('JSON_INVALID', this.pathStr, 'labels');
+		) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'labels');
 		if (
 			(!Array.isArray(json.labels) || json.labels.length === 0) &&
 			(!Array.isArray(json.groups) || json.groups.length === 0)
@@ -380,7 +322,7 @@ export class ContainerRepacker {
 			if (json.labels) await this.writeLabels(json.labels);
 			if (json.groups) {
 				for (const group of json.groups) {
-					if (typeof group.name !== 'string' || !Array.isArray(group.labels)) throw new NonFatalError('JSON_INVALID', this.pathStr, 'labels');
+					if (typeof group.name !== 'string' || !Array.isArray(group.labels)) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'labels');
 					await this.writeFile.writeChar8Headered(group.name);
 					await this.writeFile.writeUInt32(group.labels.length);
 					await this.writeFile.writeUInt32(0x0); // unknown
@@ -394,7 +336,7 @@ export class ContainerRepacker {
 
 	private async writeLabels(labels: Labels.Label[]) {
 		for (const label of labels) {
-			if (typeof label.name !== 'string' || typeof label.text !== 'string') throw new NonFatalError('JSON_INVALID', this.pathStr, 'labels');
+			if (typeof label.name !== 'string' || typeof label.text !== 'string') throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'labels');
 			await this.writeFile.writeChar8Headered(label.name);
 			await this.writeFile.writeChar16Headered(label.text);
 		}
@@ -418,37 +360,26 @@ export class ContainerRepacker {
 		}
 	}
 
-	private inBranchOfDirectory(directoryName: string | RegExp) {
-		if (typeof directoryName === 'string') {
-			return this.path.includes(directoryName);
-		} else {
-			for (const dir of this.path) {
-				if (directoryName.test(dir)) return true;
-			}
-			return false;
-		}
-	}
-
 	private *files(index: Container.Index): Generator<Container.FileInfo> {
 		if (index.dirs) {
 			for (const dirInfo of index.dirs) {
-				this.path.push(dirInfo.name);
+				pathManager.pushSegment(dirInfo.name);
 				yield* this.files(dirInfo.index);
-				this.path.pop();
+				pathManager.popSegment();
 			}
 		}
 
 		if (index.files) {
 			for (const fileInfo of index.files) {
-				this.path.push(fileInfo.name);
+				pathManager.pushSegment(fileInfo.name);
 				yield fileInfo;
-				this.path.pop();
+				pathManager.popSegment();
 			}
 		}
 	}
 
 	private async readFromJSON<T extends object>() {
-		if (!this.sourcePath.endsWith('.json')) throw new NonFatalError('FILE_UNEXPECTED_EXTENSION', this.pathStr, '.json');
-		return JSON.parse(await fsP.readFile(this.sourcePath, 'utf8')) as T;
+		if (!pathManager.currentSegment.endsWith('.json')) throw new NonFatalError('FILE_UNEXPECTED_EXTENSION', pathManager.pathString, '.json');
+		return JSON.parse(await fsP.readFile(pathManager.source, 'utf8')) as T;
 	}
 }

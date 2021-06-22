@@ -1,13 +1,12 @@
 import fs, { promises as fsP } from 'fs';
-import path from 'path';
 
 import { Command } from 'commander';
 
 import { NonFatalError, AnomalyError } from './errors.js';
 
+import { pathManager } from './managers/path-manager.js';
+
 import { ReadFile, WriteFile } from './util/file-handle.js';
-import { mkdirIfDoesNotExist } from './util/mkdir-if-does-not-exist.js';
-import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
 import * as Savegame from './types/savegame.js';
 
@@ -21,32 +20,17 @@ export class SavegameUnpacker {
 		.description('unpack one or more savegames')
 		.option('-v, --verbose', 'verbose output')
 		.action(async (source: string, destination?: string) => {
-			[source, destination] = await resolvePathArguments('.m4s', source, destination);
+			await pathManager.init('m4s', 'unpack', source, destination);
 
-			const unpacker = new SavegameUnpacker(source, destination, SavegameUnpacker.command.opts() as Settings);
+			const unpacker = new SavegameUnpacker(SavegameUnpacker.command.opts() as Settings);
 			await unpacker.run();
 		});
 
-	private readonly path: string[] = [];
 	private readonly readFiles: ReadFile[] = [];
 
 	private constructor(
-		private sourceRoot: string,
-		private readonly destinationRoot: string,
 		private readonly settings: Settings,
 	) {}
-
-	private get sourcePath() {
-		return path.join(this.sourceRoot, ...this.path);
-	}
-
-	private get destinationPath() {
-		return path.join(this.destinationRoot, ...this.path).replace(/\.m4s/g, '-m4s');
-	}
-
-	private get pathStr() {
-		return path.join(...this.path);
-	}
 
 	private get readFile() {
 		return this.readFiles[this.readFiles.length - 1];
@@ -55,42 +39,13 @@ export class SavegameUnpacker {
 	private async run() {
 		if (this.settings.verbose) console.time('Duration');
 
-		const sourceEntry = await fsP.stat(this.sourceRoot);
-
-		if (sourceEntry.isFile() && this.sourceRoot.endsWith('.m4s')) {
-			this.path.push(path.parse(this.sourceRoot).base);
-			this.sourceRoot = path.parse(this.sourceRoot).dir;
+		await pathManager.forEachSourceFile(async () => {
 			await this.createReadFile(async () => {
 				await this.unpackSavegame();
 			});
-		} else if (sourceEntry.isDirectory() && !this.sourceRoot.endsWith('.m4s')) {
-			await this.checkDir(true);
-		} else {
-			throw new NonFatalError('SOURCE_INVALID_UNPACK', 'm4s');
-		}
+		});
 
 		if (this.settings.verbose) console.timeEnd('Duration');
-	}
-
-	private async checkDir(root = false) {
-		const dir = (await fsP.readdir(this.sourcePath, { withFileTypes: true }))
-			.filter(entry => (entry.isDirectory() && !entry.name.startsWith('.m4s')) || (entry.isFile() && entry.name.endsWith('.m4s')));
-
-		if (root && !dir.some(entry => entry.name.endsWith('.m4s'))) throw new NonFatalError('SOURCE_INVALID_UNPACK', 'm4s');
-
-		for (const entry of dir) {
-			this.path.push(entry.name);
-
-			if (entry.isFile()) {
-				await this.createReadFile(async () => {
-					await this.unpackSavegame();
-				});
-			} else {
-				await this.checkDir();
-			}
-
-			this.path.pop();
-		}
 	}
 
 	////////////
@@ -100,15 +55,15 @@ export class SavegameUnpacker {
 		if (
 			await this.readFile.readChar8(8) !== 'ubi/b0-l' ||
 			await this.readFile.readUInt32() !== 0x3
-		) throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', this.pathStr, 'savegame');
+		) throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', pathManager.pathString, 'savegame');
 
 		const title = await this.readFile.readChar16Headered();
 		const createdAt = await this.readTimestamp();
 
-		this.path.push('thumbnail.jpg');
+		pathManager.pushSegment('thumbnail.jpg');
 		const thumbnailSize = await this.readFile.readUInt32();
 		await this.writeToFile(thumbnailSize);
-		this.path.pop();
+		pathManager.popSegment();
 
 		const positionData = await this.readPositionData();
 
@@ -126,7 +81,7 @@ export class SavegameUnpacker {
 		const foundAmuletHints = await this.readFoundAmuletHints();
 		const journalEntries = await this.readJournalEntries();
 
-		this.path.push('savegame.json');
+		pathManager.pushSegment('savegame.json');
 		await this.writeToJSON<Savegame.JSONFile>({
 			type: 'savegame',
 			title,
@@ -137,7 +92,7 @@ export class SavegameUnpacker {
 			foundAmuletHints,
 			journalEntries,
 		});
-		this.path.pop();
+		pathManager.popSegment();
 	}
 
 	private async readTimestamp(): Promise<Savegame.Timestamp> {
@@ -313,17 +268,17 @@ export class SavegameUnpacker {
 	}
 
 	private async readJournalEntries() {
-		this.path.push('journal');
+		pathManager.pushSegment('journal');
 
 		const journalEntries: Savegame.JournalEntry[] = [];
 		for (let i = 0; i < 999; i++) {
 			const text = await this.readFile.readChar16Headered();
 			const hasPhoto = await this.readFile.readBool();
 			if (hasPhoto) {
-				this.path.push(`${i.toString().padStart(3, '0')}.jpg`);
+				pathManager.pushSegment(`${i.toString().padStart(3, '0')}.jpg`);
 				const photoSize = await this.readFile.readUInt32();
 				await this.writeToFile(photoSize);
-				this.path.pop();
+				pathManager.popSegment();
 			}
 
 			const nextPageExists = await this.readFile.readBool();
@@ -335,7 +290,7 @@ export class SavegameUnpacker {
 			}
 		}
 
-		this.path.pop();
+		pathManager.popSegment();
 
 		return journalEntries;
 	}
@@ -353,7 +308,7 @@ export class SavegameUnpacker {
 			action = startOrAction;
 		}
 
-		let sourcePath = this.sourcePath;
+		let sourcePath = pathManager.source;
 		sourcePath = sourcePath.slice(0, sourcePath.indexOf('.m4s') + 4);
 
 		await fsP.access(sourcePath, fs.constants.R_OK)
@@ -369,9 +324,9 @@ export class SavegameUnpacker {
 	}
 
 	private async writeToFile(numBytes: number) {
-		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir);
+		await pathManager.mkdirIfDoesNotExist();
 
-		const writeFile = await WriteFile.open(this.destinationPath);
+		const writeFile = await WriteFile.open(pathManager.destination);
 		try {
 			await this.readFile.transfer(writeFile, numBytes);
 		} finally {
@@ -380,7 +335,7 @@ export class SavegameUnpacker {
 	}
 
 	private async writeToJSON<T extends object>(object: T) {
-		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir);
-		await fsP.writeFile(this.destinationPath, JSON.stringify(object, undefined, '\t'));
+		await pathManager.mkdirIfDoesNotExist();
+		await fsP.writeFile(pathManager.destination, JSON.stringify(object, undefined, '\t'));
 	}
 }

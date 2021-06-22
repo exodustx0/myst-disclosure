@@ -5,11 +5,11 @@ import { Command } from 'commander';
 
 import { NonFatalError, AnomalyError } from './errors.js';
 
+import { pathManager } from './managers/path-manager.js';
+
 import { numFilesInIndex, getNextFileFromIndex } from './util/container-helpers.js';
 import { ReadFile, WriteFile } from './util/file-handle.js';
-import { mkdirIfDoesNotExist } from './util/mkdir-if-does-not-exist.js';
 import { ProgressLogger } from './util/progress-logger.js';
-import { resolvePathArguments } from './util/resolve-path-arguments.js';
 
 import type * as Container from './types/container.js';
 import type * as CommandBlock from './types/command-block.js';
@@ -31,45 +31,19 @@ export class ContainerUnpacker {
 		.option('-i, --index-only', 'only unpack the index of containers')
 		.option('-L, --skip-log-files', 'skip unpacking of .log files')
 		.action(async (source: string, destination?: string) => {
-			[source, destination] = await resolvePathArguments('.m4b', source, destination);
+			await pathManager.init('m4b', 'unpack', source, destination);
 
-			const unpacker = new ContainerUnpacker(source, destination, ContainerUnpacker.command.opts() as Settings);
+			const unpacker = new ContainerUnpacker(ContainerUnpacker.command.opts() as Settings);
 			await unpacker.run();
 		});
 
-	private readonly path: string[] = [];
 	private readonly readFiles: ReadFile[] = [];
 	private readonly progressLogger?: ProgressLogger;
 
 	private constructor(
-		private sourceRoot: string,
-		private readonly destinationRoot: string,
 		private readonly settings: Settings,
 	) {
 		if (this.settings.verbose) this.progressLogger = new ProgressLogger();
-	}
-
-	private get sourcePath() {
-		return path.join(this.sourceRoot, ...this.path);
-	}
-
-	private get destinationPath() {
-		return path.join(this.destinationRoot, ...this.path).replace(/\.m4b/g, '-m4b');
-	}
-
-	private get pathStr() {
-		return path.join(...this.path);
-	}
-
-	private get currentContainerPath() {
-		let currentContainerPath = this.path[this.path.length - 1];
-		for (let i = this.path.length - 2; i >= 0; i--) {
-			const segment = this.path[i];
-			if (segment.endsWith('.m4b')) break;
-			currentContainerPath = path.join(segment, currentContainerPath);
-		}
-
-		return currentContainerPath;
 	}
 
 	private get readFile() {
@@ -79,42 +53,13 @@ export class ContainerUnpacker {
 	private async run() {
 		if (this.settings.verbose) console.time('Duration');
 
-		const sourceEntry = await fsP.stat(this.sourceRoot);
-
-		if (sourceEntry.isFile() && this.sourceRoot.endsWith('.m4b')) {
-			this.path.push(path.parse(this.sourceRoot).base);
-			this.sourceRoot = path.parse(this.sourceRoot).dir;
+		await pathManager.forEachSourceFile(async () => {
 			await this.createReadFile(async () => {
 				await this.unpackContainer();
 			});
-		} else if (sourceEntry.isDirectory() && !this.sourceRoot.endsWith('.m4b')) {
-			await this.checkDir(true);
-		} else {
-			throw new NonFatalError('SOURCE_INVALID_UNPACK', 'm4b');
-		}
+		});
 
 		if (this.settings.verbose) console.timeEnd('Duration');
-	}
-
-	private async checkDir(root = false) {
-		const dir = (await fsP.readdir(this.sourcePath, { withFileTypes: true }))
-			.filter(entry => (entry.isDirectory() && !entry.name.startsWith('.m4b')) || (entry.isFile() && entry.name.endsWith('.m4b')));
-
-		if (root && !dir.some(entry => entry.name.endsWith('.m4b'))) throw new NonFatalError('SOURCE_INVALID_UNPACK', 'm4b');
-
-		for (const entry of dir) {
-			this.path.push(entry.name);
-
-			if (entry.isFile()) {
-				await this.createReadFile(async () => {
-					await this.unpackContainer();
-				});
-			} else {
-				await this.checkDir();
-			}
-
-			this.path.pop();
-		}
 	}
 
 	/////////////
@@ -123,14 +68,14 @@ export class ContainerUnpacker {
 	private async unpackContainer(startOfContainer = 0) {
 		const signatureLength = await this.readFile.readUInt32();
 		const signature = await this.readFile.readChar8(0xB);
-		if (signatureLength !== 0xB || signature !== 'UBI_BF_SIG\0') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', this.pathStr, 'container');
+		if (signatureLength !== 0xB || signature !== 'UBI_BF_SIG\0') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', pathManager.pathString, 'container');
 		if (await this.readFile.readUInt32() !== 1) throw new AnomalyError('unknown-1 != 1');
 		if (await this.readFile.readUInt32() !== 0) throw new AnomalyError('unknown-2 != 0');
 
 		const index = await this.readIndex();
 		this.validateIndex(index);
 
-		if (this.settings.verbose) this.progressLogger!.levelUp(numFilesInIndex(index), this.currentContainerPath);
+		if (this.settings.verbose) this.progressLogger!.levelUp(numFilesInIndex(index), pathManager.currentDeepestItemPath);
 
 		if (this.settings.indexOnly) {
 			await this.writeToJSON<Container.JSONFile>({
@@ -218,13 +163,13 @@ export class ContainerUnpacker {
 						break;
 
 					case 'bin':
-						if (this.inBranchOfDirectory(/^command_?blocks?$/)) {
+						if (pathManager.inBranchOfDirectory(/^command_?blocks?$/)) {
 							await this.readCommandBlockFile();
-						} else if (this.inBranchOfDirectory('textures')) {
+						} else if (pathManager.inBranchOfDirectory('textures')) {
 							await this.readTexturesFile();
-						} else if (this.inBranchOfDirectory('subtitle')) {
+						} else if (pathManager.inBranchOfDirectory('subtitle')) {
 							await this.readSubtitlesFile();
-						} else if (this.inBranchOfDirectory('text')) {
+						} else if (pathManager.inBranchOfDirectory('text')) {
 							await this.readLabelsFile();
 						} else {
 							await this.writeToFile();
@@ -244,12 +189,12 @@ export class ContainerUnpacker {
 
 	private async readSignature(type: string) {
 		const signature = await this.readFile.readChar8(8);
-		if (signature !== 'ubi/b0-l') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', this.pathStr, type);
+		if (signature !== 'ubi/b0-l') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', pathManager.pathString, type);
 	}
 
 	private async readInternalFileName() {
 		const filename = await this.readFile.readCharEncHeadered();
-		if (filename !== path.parse(this.path[this.path.length - 1]).name) throw new AnomalyError('internal file name != file name');
+		if (filename !== path.parse(pathManager.currentSegment).name) throw new AnomalyError('internal file name != file name');
 	}
 
 	private async readCommandBlockFile() {
@@ -379,7 +324,7 @@ export class ContainerUnpacker {
 			action = startOrAction;
 		}
 
-		let sourcePath = this.sourcePath;
+		let sourcePath = pathManager.source;
 		sourcePath = sourcePath.slice(0, sourcePath.indexOf('.m4b') + 4);
 
 		await fsP.access(sourcePath, fs.constants.R_OK)
@@ -394,39 +339,28 @@ export class ContainerUnpacker {
 		}
 	}
 
-	private inBranchOfDirectory(directoryName: string | RegExp) {
-		if (typeof directoryName === 'string') {
-			return this.path.includes(directoryName);
-		} else {
-			for (const dir of this.path) {
-				if (directoryName.test(dir)) return true;
-			}
-			return false;
-		}
-	}
-
 	private *files(index: Container.Index): Generator<Container.FileInfo> {
 		if (index.dirs) {
 			for (const dirInfo of index.dirs) {
-				this.path.push(dirInfo.name);
+				pathManager.pushSegment(dirInfo.name);
 				yield* this.files(dirInfo.index);
-				this.path.pop();
+				pathManager.popSegment();
 			}
 		}
 
 		if (index.files) {
 			for (const fileInfo of index.files) {
-				this.path.push(fileInfo.name);
+				pathManager.pushSegment(fileInfo.name);
 				yield fileInfo;
-				this.path.pop();
+				pathManager.popSegment();
 			}
 		}
 	}
 
 	private async writeToFile(newExtension = '') {
-		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir);
+		await pathManager.mkdirIfDoesNotExist();
 
-		const writeFile = await WriteFile.open(this.destinationPath + newExtension);
+		const writeFile = await WriteFile.open(pathManager.destination + newExtension);
 		try {
 			await this.readFile.transfer(writeFile);
 		} finally {
@@ -435,7 +369,7 @@ export class ContainerUnpacker {
 	}
 
 	private async writeToJSON<T extends object>(object: T) {
-		await mkdirIfDoesNotExist(path.parse(this.destinationPath).dir);
-		await fsP.writeFile(this.destinationPath + '.json', JSON.stringify(object, undefined, '\t'));
+		await pathManager.mkdirIfDoesNotExist();
+		await fsP.writeFile(pathManager.destination + '.json', JSON.stringify(object, undefined, '\t'));
 	}
 }
