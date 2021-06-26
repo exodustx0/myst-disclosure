@@ -61,7 +61,7 @@ const sourceIsDirectoryOfItems = () => {
 
 const mkdirIfDoesNotExist = () => {
 	return new Promise<void>((resolve, reject) => {
-		// We only know that we want to mkdir when we encountered a file we want to write, so path will always be the containing directory
+		// We only know that we want to mkdir when we encountered a file we want to write, so path will point to file; always go up one level
 		const destinationPath = path.parse(
 			path.join(destination, ...pathSegments)
 				.replace(new RegExp('\\' + sourceExtension, 'g'), destinationExtension),
@@ -69,10 +69,14 @@ const mkdirIfDoesNotExist = () => {
 
 		fsP.access(destinationPath, fs.constants.F_OK)
 			.then(() => {
-				fsP.access(destinationPath, fs.constants.W_OK).then(resolve).catch(() => reject(new NonFatalError('NO_WRITE_PERMISSIONS_PATH', destinationPath)));
+				fsP.access(destinationPath, fs.constants.W_OK)
+					.then(() => resolve())
+					.catch(() => reject(new NonFatalError('NO_WRITE_PERMISSIONS_PATH', destinationPath)));
 			}).catch(() => {
 				// We only know that we want to mkdir when we encountered a file we want to write, so we have no guarantee that parent directory exists; always recurse
-				fsP.mkdir(destinationPath, { recursive: true }).then(() => resolve()).catch(reject);
+				fsP.mkdir(destinationPath, { recursive: true })
+					.then(() => resolve())
+					.catch(() => reject());
 			});
 	});
 };
