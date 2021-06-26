@@ -68,7 +68,7 @@ export class ContainerUnpacker {
 	private async unpackContainer(startOfContainer = 0) {
 		const signatureLength = await this.readFile.readUInt32();
 		const signature = await this.readFile.readChar8(0xB);
-		if (signatureLength !== 0xB || signature !== 'UBI_BF_SIG\0') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', pathManager.pathString, 'container');
+		if (signatureLength !== 0xB || signature !== 'UBI_BF_SIG\0') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', { path: pathManager.pathString, type: 'container' });
 		if (await this.readFile.readUInt32() !== 1) throw new AnomalyError('unknown-1 != 1');
 		if (await this.readFile.readUInt32() !== 0) throw new AnomalyError('unknown-2 != 0');
 
@@ -189,7 +189,7 @@ export class ContainerUnpacker {
 
 	private async readSignature(type: string) {
 		const signature = await this.readFile.readChar8(8);
-		if (signature !== 'ubi/b0-l') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', pathManager.pathString, type);
+		if (signature !== 'ubi/b0-l') throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', { path: pathManager.pathString, type });
 	}
 
 	private async readInternalFileName() {
@@ -326,7 +326,7 @@ export class ContainerUnpacker {
 		sourcePath = sourcePath.slice(0, sourcePath.indexOf('.m4b') + 4);
 
 		await fsP.access(sourcePath, fs.constants.R_OK)
-			.catch(() => { throw new NonFatalError('NO_READ_PERMISSIONS_PATH', sourcePath) });
+			.catch(() => { throw new NonFatalError('NO_READ_PERMISSIONS_PATH', { path: sourcePath }) });
 
 		this.readFiles.push(await ReadFile.open(sourcePath, start, start + size));
 

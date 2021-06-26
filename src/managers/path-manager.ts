@@ -22,26 +22,26 @@ const isUnpacking = () => {
 
 const checkPath = async (pathArg: string, type: 'source' | 'destination') => {
 	await fsP.access(pathArg, fs.constants.F_OK).catch(() => {
-		throw new NonFatalError('PATH_DOES_NOT_EXIST', type);
+		throw new NonFatalError('PATH_DOES_NOT_EXIST', { type });
 	});
 
 	if (type === 'source') {
 		await fsP.access(pathArg, fs.constants.R_OK).catch(() => {
-			throw new NonFatalError('NO_READ_PERMISSIONS_TYPE', type);
+			throw new NonFatalError('NO_READ_PERMISSIONS_TYPE', { type });
 		});
 	} else {
 		if (!(await fsP.stat(pathArg)).isDirectory()) throw new NonFatalError('DESTINATION_INVALID');
 
 		await fsP.access(pathArg, fs.constants.W_OK).catch(() => {
-			throw new NonFatalError('NO_WRITE_PERMISSIONS_TYPE', type);
+			throw new NonFatalError('NO_WRITE_PERMISSIONS_TYPE', { type });
 		});
 	}
 };
 
 const throwSourceInvalid = () => {
 	const error = isUnpacking()
-		? new NonFatalError('SOURCE_INVALID_UNPACK', extension)
-		: new NonFatalError('SOURCE_INVALID_REPACK', extension);
+		? new NonFatalError('SOURCE_INVALID_UNPACK', { extension })
+		: new NonFatalError('SOURCE_INVALID_REPACK', { extension });
 
 	Error.captureStackTrace(error, throwSourceInvalid);
 
@@ -71,7 +71,7 @@ const mkdirIfDoesNotExist = () => {
 			.then(() => {
 				fsP.access(destinationPath, fs.constants.W_OK)
 					.then(() => resolve())
-					.catch(() => reject(new NonFatalError('NO_WRITE_PERMISSIONS_PATH', destinationPath)));
+					.catch(() => reject(new NonFatalError('NO_WRITE_PERMISSIONS_PATH', { path: destinationPath })));
 			}).catch(() => {
 				// We only know that we want to mkdir when we encountered a file we want to write, so we have no guarantee that parent directory exists; always recurse
 				fsP.mkdir(destinationPath, { recursive: true })

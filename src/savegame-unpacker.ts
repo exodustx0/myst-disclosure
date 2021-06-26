@@ -55,7 +55,7 @@ export class SavegameUnpacker {
 		if (
 			await this.readFile.readChar8(8) !== 'ubi/b0-l' ||
 			await this.readFile.readUInt32() !== 0x3
-		) throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', pathManager.pathString, 'savegame');
+		) throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', { path: pathManager.pathString, type: 'savegame' });
 
 		const title = await this.readFile.readChar16Headered();
 		const createdAt = await this.readTimestamp();
@@ -312,7 +312,7 @@ export class SavegameUnpacker {
 		sourcePath = sourcePath.slice(0, sourcePath.indexOf('.m4s') + 4);
 
 		await fsP.access(sourcePath, fs.constants.R_OK)
-			.catch(() => { throw new NonFatalError('NO_READ_PERMISSIONS_PATH', sourcePath) });
+			.catch(() => { throw new NonFatalError('NO_READ_PERMISSIONS_PATH', { path: sourcePath }) });
 
 		this.readFiles.push(await ReadFile.open(sourcePath, start, start + size));
 

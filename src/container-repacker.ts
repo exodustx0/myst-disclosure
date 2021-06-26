@@ -196,7 +196,7 @@ export class ContainerRepacker {
 		if (
 			(json.type as string) !== 'command block' ||
 			!Array.isArray(json.commands)
-		) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'command block');
+		) throw new NonFatalError('JSON_INVALID', { path: pathManager.pathString, type: 'command block' });
 
 		fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
 		fileInfo.tempPath = tempManager.newFilePath;
@@ -230,7 +230,7 @@ export class ContainerRepacker {
 				await this.writeFile.writeCharEncHeadered('png'); // image format
 
 				const png = await ReadFile.open(pathManager.source);
-				if (!await png.equals([0x89, 0x50, 0x4E, 0x47])) throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', pathManager.pathString, 'PNG');
+				if (!await png.equals([0x89, 0x50, 0x4E, 0x47])) throw new NonFatalError('FILE_CORRUPTED_OR_INVALID', { path: pathManager.pathString, type: 'PNG' });
 
 				await this.writeFile.writeUInt32(png.totalSize);
 				try {
@@ -243,7 +243,7 @@ export class ContainerRepacker {
 				if (
 					(json.type as string) !== 'localized texture reference' ||
 					typeof json.path !== 'string'
-				) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'localized texture reference');
+				) throw new NonFatalError('JSON_INVALID', { path: pathManager.pathString, type: 'localized texture reference' });
 				// TODO: check if `json.path` exists in filesystem, otherwise throw AnomalyError
 
 				fileInfo.name = fileInfo.name.slice(0, -5); // '.json'
@@ -263,7 +263,7 @@ export class ContainerRepacker {
 			typeof json.relatedSoundFile !== 'string' ||
 			typeof json.sceneLength !== 'number' ||
 			!Array.isArray(json.subtitles)
-		) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'subtitles');
+		) throw new NonFatalError('JSON_INVALID', { path: pathManager.pathString, type: 'subtitles' });
 		if (json.relatedSoundFile.length === 0) throw new AnomalyError('Missing related sound file');
 		if (json.subtitles.length === 0) throw new AnomalyError('No subtitles');
 		if (json.subtitles[json.subtitles.length - 1].start > json.sceneLength) throw new AnomalyError('Scene length doesn\'t contain all subtitles');
@@ -285,7 +285,7 @@ export class ContainerRepacker {
 				if (
 					typeof a.start !== 'number' ||
 					(a.text !== undefined && typeof a.text !== 'string')
-				) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'subtitles');
+				) throw new NonFatalError('JSON_INVALID', { path: pathManager.pathString, type: 'subtitles' });
 				const b = json.subtitles[subtitleIndex];
 				await this.writeFile.writeFloat(a.start);
 				await this.writeFile.writeFloat(b.start);
@@ -303,7 +303,7 @@ export class ContainerRepacker {
 			(json.type as string) !== 'labels' ||
 			(json.labels !== undefined && !Array.isArray(json.labels)) ||
 			(json.groups !== undefined && !Array.isArray(json.groups))
-		) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'labels');
+		) throw new NonFatalError('JSON_INVALID', { path: pathManager.pathString, type: 'labels' });
 		if (
 			(!Array.isArray(json.labels) || json.labels.length === 0) &&
 			(!Array.isArray(json.groups) || json.groups.length === 0)
@@ -322,7 +322,7 @@ export class ContainerRepacker {
 			if (json.labels) await this.writeLabels(json.labels);
 			if (json.groups) {
 				for (const group of json.groups) {
-					if (typeof group.name !== 'string' || !Array.isArray(group.labels)) throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'labels');
+					if (typeof group.name !== 'string' || !Array.isArray(group.labels)) throw new NonFatalError('JSON_INVALID', { path: pathManager.pathString, type: 'labels' });
 					await this.writeFile.writeChar8Headered(group.name);
 					await this.writeFile.writeUInt32(group.labels.length);
 					await this.writeFile.writeUInt32(0x0); // unknown
@@ -336,7 +336,7 @@ export class ContainerRepacker {
 
 	private async writeLabels(labels: Labels.Label[]) {
 		for (const label of labels) {
-			if (typeof label.name !== 'string' || typeof label.text !== 'string') throw new NonFatalError('JSON_INVALID', pathManager.pathString, 'labels');
+			if (typeof label.name !== 'string' || typeof label.text !== 'string') throw new NonFatalError('JSON_INVALID', { path: pathManager.pathString, type: 'labels' });
 			await this.writeFile.writeChar8Headered(label.name);
 			await this.writeFile.writeChar16Headered(label.text);
 		}
@@ -349,7 +349,7 @@ export class ContainerRepacker {
 		const destinationDir = path.parse(destinationPath).dir;
 
 		await fsP.access(destinationDir, fs.constants.R_OK)
-			.catch(() => { throw new NonFatalError('NO_WRITE_PERMISSIONS_PATH', destinationDir) });
+			.catch(() => { throw new NonFatalError('NO_WRITE_PERMISSIONS_PATH', { path: destinationDir }) });
 
 		this.writeFiles.push(await WriteFile.open(destinationPath));
 
@@ -379,7 +379,7 @@ export class ContainerRepacker {
 	}
 
 	private async readFromJSON<T extends object>() {
-		if (!pathManager.currentSegment.endsWith('.json')) throw new NonFatalError('FILE_UNEXPECTED_EXTENSION', pathManager.pathString, '.json');
+		if (!pathManager.currentSegment.endsWith('.json')) throw new NonFatalError('FILE_UNEXPECTED_EXTENSION', { path: pathManager.pathString, extension: 'json' });
 		return JSON.parse(await fsP.readFile(pathManager.source, 'utf8')) as T;
 	}
 }

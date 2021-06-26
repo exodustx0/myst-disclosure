@@ -4,20 +4,28 @@ import type { Primitive } from 'type-fest';
 
 import { messages } from './messages.js';
 
-type NumArgs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-type ReplacementTokens<S extends string, N extends number = 1> =
+type Tokens<S extends string> = 
+	S extends `${string}{${infer Key}}${infer Rest}`
+	? Key | Tokens<Rest>
+	: never;
+
+type ReplacementObject<S extends string> =
 	string extends S
 	? string[]
-	: S extends `${string}$${N}${string}`
-	? N extends 20 ? [Primitive] : [Primitive, ...ReplacementTokens<S, NumArgs[N]>]
-	: [];
+	: S extends `${string}{${string}}${string}`
+	? [replacementObject: Record<Tokens<S>, Primitive>]
+	: [replacementObject?: Record<string, never>];
 
 export class CustomError extends Error {}
 export class NonFatalError<MSG extends keyof typeof messages> extends CustomError {
-	constructor(messageKey: MSG, ...replacementTokens: ReplacementTokens<typeof messages[MSG]>) {
+	constructor(messageKey: MSG, ...[replacementObject]: ReplacementObject<typeof messages[MSG]>) {
 		let message = messages[messageKey] as string;
-		for (const [i, replacement] of replacementTokens.entries()) {
-			if (message.includes(`$${i + 1}`)) message = message.replace(new RegExp(`\\$${i + 1}`, 'g'), String(replacement));
+		while (true) {
+			const tokenMatch = /{([a-z\d]+)}/i.exec(message);
+			if (!tokenMatch) break;
+
+			const [token, key] = tokenMatch;
+			message = message.replace(token, replacementObject![key as keyof typeof replacementObject]);
 		}
 
 		super(message);

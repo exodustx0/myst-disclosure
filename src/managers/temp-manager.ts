@@ -17,7 +17,7 @@ const deleteTempDir = () => {
 		// FIXME: figure out why most of the time, when interrupting, the temp files get deleted, but not the containing folder (tempDirPath)
 		del.sync(tempDirPath, { force: true });
 	} catch {
-		throw new NonFatalError('TEMP_DIR_DELETE_FAILED', tempDirPath);
+		throw new NonFatalError('TEMP_DIR_DELETE_FAILED', { path: tempDirPath });
 	}
 	tempDirPath = '';
 };
