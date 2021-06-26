@@ -17,6 +17,5 @@
 		"resolveJsonModule": false,
 		"forceConsistentCasingInFileNames": true,
 		"skipLibCheck": true,
-		"importsNotUsedAsValues": "error"
 	}
 }
