@@ -94,21 +94,21 @@ export interface StateClass {
  * char8enc  | [ca] | name         |
  * uint8     | 0x1  | type         | [cb]
  * switch (type) {
- *  case 0x1:
+ *  case 1:
  * uint8     | 0x1  | value        |
- *  case 0x3:
+ *  case 3:
  * uint32    | 0x1  | value        |
- *  case 0x4:
+ *  case 4:
  * int8      | 0x1  | value        |
- *  case 0x6:
+ *  case 6:
  * int32     | 0x1  | value        |
- *  case 0x7:
+ *  case 7:
  * float     | 0x1  | value        |
- *  case 0x9:
+ *  case 9:
  * uint8     | 0x1  | value        | bool (0 or 1)
- *  case 0x11:
+ *  case 11:
  * float     | 0x3  | value        |
- *  case 0x13:
+ *  case 13:
  * uint32    | 0x1  | value length | [cc]
  * char8     | [cc] | value        |
  * }
